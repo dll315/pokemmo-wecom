@@ -1,8 +1,9 @@
 import {readFileSync} from 'node:fs';
 import {buildCatalog} from './public.mjs';
 import {findAlphaDetails} from './wecom.mjs';
+import {reportTiming} from './report-time.mjs';
 const SOURCE_CATALOG=JSON.parse(readFileSync(new URL('../data/alpha-catalog.json',import.meta.url),'utf8'));
-export function formatIncoming(input,translator){
+export function formatIncoming(input,translator,{receivedAt=Date.now()}={}){
 const DICTIONARIES={...translator.maps,catalog:SOURCE_CATALOG};
 // DICTIONARIES 在生成工作流时内嵌，不需要联网翻译或 AI API。
 const incoming={body:input};
@@ -65,7 +66,11 @@ function time(v){
   return d.toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',hour12:false})+'（北京时间）';
 }
 if(!pokemon&&!raw)throw new Error('无法识别报点：请检查 Alphapedia Test 返回的消息结构');
-const lines=[`## PokeMMO ${kind}提醒`,`**宝可梦：** ${tr('pokemon',pokemon)}`,`**地区：** ${tr('region',region)}`,`**位置：** ${tr('location',location)}`];
+const title=`${region?tr('region',region):'地区待确认'} ${kind==='头目'?'头目':kind.startsWith('明雷')?'明雷':'通知'} ${pokemon?tr('pokemon',pokemon):'名称待确认'}`;
+const matchingLink=[['pokemon',pokemon],['region',region],['location',location]].every(([key,value])=>params.get(key)&&canonical(key,params.get(key))===value);
+const timing=reportTiming(pick,{linkEnd:matchingLink&&/^https:\/\/alpha\.pokemmotools\.org\/(?:alpha|swarm)-list(?:\?|$)/i.test(sourceLink)?params.get('timestamp'):''});
+const lines=[title,`**开始时间：** ${timing.startText}`,`**结束时间：** ${timing.endText}`,`**时间依据：** ${timing.startSource}；${timing.endSource}`,`**宝可梦：** ${tr('pokemon',pokemon)}`,`**地区：** ${tr('region',region)}`,`**位置：** ${tr('location',location)}`];
+if(timing.invalidOrder)lines.splice(3,0,'**时间异常：** 结束早于开始，请核实源站；不能据此判断仍在场。');
 const details=kind==='头目'?findAlphaDetails({pokemon,region,location},buildCatalog(SOURCE_CATALOG,translator)):null;
 const catalog=DICTIONARIES.catalog?.[region]?.[location]||[];
 const detail=catalog.find(row=>norm(row.name)===norm(pokemon))?.data;
@@ -75,7 +80,7 @@ if(detail&&kind==='头目'){
   if(detail['Location Notes'])lines.push(`**前往条件：** ${tr('notes',detail['Location Notes'])}`);
   if(detail.Notes?.length)lines.push(`**捕捉备注：** ${detail.Notes.map(v=>tr('notes',v)).join('；')}`);
 }else if(kind==='头目')lines.push('**捕捉资料：** 未匹配到该精灵在此地点的资料，请以游戏为准。');
-lines.push(`**报点时间：** ${time(pick('reportedAt','reported_at','spawnedAt'))}`,`**消失时间：** ${time(pick('expiresAt','expires_at','despawnAt'))}`,`**接收时间：** ${time(new Date().toISOString())}`);
+lines.push(`**报点时间：** ${time(pick('reportedAt','reported_at','spawnedAt'))}`,`**接收时间：** ${time(new Date(receivedAt).toISOString())}`);
 if(pick('status','状态'))lines.push(`**来源状态：** ${translated(clean(pick('status','状态')))}`);
 // 原文先限长，避免超长输入引起词表替换开销；只对显示文本做翻译。
 if(raw)lines.push('**原始报点（已替换可识别的中文名称）：**',translated(clean(raw).slice(0,5000)));
@@ -83,6 +88,6 @@ const footer=`\n[查看来源](${sourceLink})\n> 社区报点可能延迟、更�
 const bytes=s=>Array.from(s).reduce((n,c)=>n+(c.codePointAt(0)>65535?4:c.codePointAt(0)>2047?3:c.codePointAt(0)>127?2:1),0);
 let content=lines.join('\n');
 if(bytes(content+footer)>4000){const chars=Array.from(content);let size=bytes(content);while(chars.length&&size+bytes('\n…（内容过长已截断）'+footer)>4000)size-=bytes(chars.pop());content=chars.join('')+'\n…（内容过长已截断）';}
-return {payload:{msgtype:'markdown',markdown:{content:content+footer}},details,pokemon,region,location,kind:kind==='头目'?'alpha':kind.startsWith('明雷')?'swarm':'unknown'};
+return {payload:{msgtype:'markdown',markdown:{content:content+footer}},title,timing,reportedStatus:clean(pick('status','状态')),details,pokemon,region,location,kind:kind==='头目'?'alpha':kind.startsWith('明雷')?'swarm':'unknown'};
 
 }

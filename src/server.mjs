@@ -36,6 +36,7 @@ export function createApp({store,monitor,translator,inbox,password='123456',publ
       if(req.method==='GET'&&url.pathname.startsWith('/maps/')){const asset=mapAsset(url.pathname);if(!asset){json(404,{error:'位置图片不存在'});return;}const bytes=await readFile(new URL('../web'+asset.path,import.meta.url));res.writeHead(200,{'Content-Type':asset.mime,'Cache-Control':'public, max-age=86400'});res.end(bytes);return;}
       if(req.method==='GET'&&url.pathname==='/healthz'){json(monitor.stopping?503:200,{status:monitor.stopping?'stopped':'running'});return;}
       const staticFiles={'/':['index.html','text/html; charset=utf-8'],'/admin':['admin.html','text/html; charset=utf-8'],'/admin/':['admin.html','text/html; charset=utf-8'],'/public.js':['public.js','text/javascript; charset=utf-8'],'/public.css':['public.css','text/css; charset=utf-8'],'/app.js':['app.js','text/javascript; charset=utf-8'],'/style.css':['style.css','text/css; charset=utf-8'],'/admin.css':['admin.css','text/css; charset=utf-8']};
+      staticFiles['/reports.js']=['reports.js','text/javascript; charset=utf-8'];
       if(req.method==='GET'&&staticFiles[url.pathname]){const[file,type]=staticFiles[url.pathname];res.writeHead(200,{'Content-Type':type});res.end(await readFile(new URL(`../web/${file}`,import.meta.url)));return;}
       if(!url.pathname.startsWith('/api/')){json(404,{error:'页面不存在'});return;}
       if(req.method==='GET'&&url.pathname==='/api/public'){json(200,createPublicView(store.state,translator,catalog,natdex));return;}

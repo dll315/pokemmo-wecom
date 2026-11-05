@@ -10,17 +10,18 @@ async function api(path,body,cookie){const r=await fetch(base+path,{method:body=
 function start(){docker(['run','-d','--name',name,'-p','127.0.0.1:18787:8787','-v',volume+':/data',image]);}
 try{
   start();await ready();
-  const home=await fetch(base);assert.ok((await home.text()).includes('当前与最近报点'));
+  const home=await fetch(base);assert.ok((await home.text()).includes('当前与近期报点'));
   const pub=(await api('/api/public')).data;assert.ok(pub.summary.catalogSpecies>0);assert.ok(pub.summary.catalogEntries>=pub.summary.catalogSpecies);
   assert.equal((await fetch(base+'/api/state')).status,401);
   let auth=await api('/api/login',{password:'123456'});
   const target=(await api('/api/targets',{name:'容器持久化检查',url:'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=container-smoke-not-a-real-key'},auth.cookie)).data;
   const inbox=(await api('/api/inbox',undefined,auth.cookie)).data;
   assert.match(inbox.path,/^\/receive\/[a-f0-9]{48}$/);
-  const accepted=await api(inbox.path,{kind:'alpha',pokemon:'Lairon',region:'Hoenn',location:'Granite Cave',content:'【容器回调测试】Alpha Lairon'});
+  const accepted=await api(inbox.path,{kind:'alpha',pokemon:'Lairon',region:'Hoenn',location:'Granite Cave',startAt:new Date().toISOString(),endAt:new Date(Date.now()+3600000).toISOString(),content:'【容器回调测试】Alpha Lairon'});
   assert.equal(accepted.data.queued,1);
   assert.equal((await api('/api/inbox',undefined,auth.cookie)).data.receipts.length,1);
   const received=(await api('/api/inbox',undefined,auth.cookie)).data.receipts[0];assert.match(received.preview,/铁尾/);assert.match(received.preview,/闪光/);assert.ok(received.preview.includes(base+received.details.mapPath));const map=await fetch(base+received.details.mapPath);assert.equal(map.status,200);assert.match(map.headers.get('content-type'),/^image\//);
+  assert.equal(received.preview.split('\n')[0],'丰缘 头目 可多拉');assert.ok(received.timing.startAt);assert.ok(received.timing.endAt);assert.equal((await fetch(base+'/reports.js')).status,200);
   // Never enable sending or call the test-message API in this smoke check.
   docker(['run','-d','--name',other,'-v',volume+':/data',image]);await pause(2000);
   assert.equal(docker(['inspect','--format','{{.State.Status}}',other]),'exited','same data volume must be locked');
