@@ -26,11 +26,10 @@ docker stop pokemmo-wecom
 docker rm pokemmo-wecom
 docker run -d --name pokemmo-wecom --restart unless-stopped \
   -p 8787:8787 -v pokemmo_data:/data \
-  -e ADMIN_PASSWORD='填写你原来的后台密码' \
   --log-opt max-size=10m --log-opt max-file=3 pokemmo-wecom:latest
 ```
 
-不要删除 `pokemmo_data` 卷。原机器人配置保留。若之前使用自定义端口、卷名或 PUBLIC_ORIGIN，重新运行时保留这些原有参数。
+不要删除 `pokemmo_data` 卷。原机器人配置保留。若之前使用自定义端口、卷名或 PUBLIC_ORIGIN，重新运行时保留这些原有参数。启动时不设置 ADMIN_PASSWORD，即使用默认后台密码123456。
 
 ## Linux：公开 GitHub 下载，docker run 部署
 
@@ -46,14 +45,13 @@ cd pokemmo-wecom
 docker build -t pokemmo-wecom:latest .
 docker run -d --name pokemmo-wecom --restart unless-stopped \
   -p 8787:8787 -v pokemmo_data:/data \
-  -e ADMIN_PASSWORD='请替换为自己的后台密码' \
   --log-opt max-size=10m --log-opt max-file=3 \
   pokemmo-wecom:latest
 ```
 
 打开 `http://服务器IP:8787`；后台为 `/admin`。放行服务器安全组/防火墙的8787端口。在后台“推送链接”添加企业微信机器人地址，发送测试消息，确认后开启自动推送。检查网站连接状态和最近成功检查时间。默认30秒检查一次；无需点击运行，无需设置官网回调或使用 n8n。
 
-首页公开；后台密码是你在启动命令中填写的值，源码中的默认123456不应作为公网长期密码。机器人地址只保存在服务器的数据卷中，不提交 GitHub。这里无需申请任何额外 API 密钥。
+首页公开；后台默认密码为 **123456**，部署命令无需填写或设置密码。机器人地址只保存在服务器的数据卷中，不提交 GitHub。这里无需申请任何额外 API 密钥。
 
 ### 已发布镜像（仅 Linux x86_64 / amd64）
 
@@ -64,7 +62,6 @@ curl -fL --retry 3 https://github.com/dll315/pokemmo-wecom/releases/latest/downl
 docker load -i pokemmo-image.tar.gz
 docker run -d --name pokemmo-wecom --restart unless-stopped \
   -p 8787:8787 -v pokemmo_data:/data \
-  -e ADMIN_PASSWORD='请替换为自己的后台密码' \
   --log-opt max-size=10m --log-opt max-file=3 \
   pokemmo-wecom:latest
 ```
@@ -168,7 +165,7 @@ docker compose up -d --build
 
 修改管理密码：编辑 `.env` 中的 `ADMIN_PASSWORD`，运行 `docker compose up -d`。已登录的旧会话随进程重启失效。
 
-机器人地址不在网页中回显，不写到公开日志。地址保存在受保护的数据卷中；备份应与机器人凭据一同保管。管理密码放在 `.env` 中。
+机器人地址不在网页中回显，不写到公开日志。地址保存在受保护的数据卷中；备份应与机器人凭据一同保管。默认后台密码为123456，无需额外配置；可选的密码覆盖值放在 `.env` 中。
 
 实例锁防止两个进程共用数据目录。Compose 固定容器 hostname。若把数据迁移到另一台主机且遗留 `instance.lock`，必须先确认旧实例已经停止，再移除数据卷中的该锁文件；不要在运行时删除锁。
 
@@ -181,7 +178,6 @@ docker compose up -d --build
 安装 Node.js 22 或更新版本（推荐24）。没有第三方运行依赖，不需要 `npm install`。
 
 ```sh
-export ADMIN_PASSWORD='123456'
 export DATA_DIR='/var/lib/pokemmo-wecom'
 export HOST='127.0.0.1'
 node src/main.mjs
