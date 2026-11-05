@@ -1,5 +1,23 @@
 # 交付验证记录
 
+## 2026-11-05：v1.2.1 实际发布验证（本节优先）
+
+公开仓库：https://github.com/dll315/pokemmo-wecom
+
+发布版本：https://github.com/dll315/pokemmo-wecom/releases/tag/v1.2.1
+
+- 本机 Node 24：75项应用测试通过。
+- Linux GitHub Actions：75项测试、实际 docker build、容器启动、公开首页、后台鉴权、机器人配置API、可写数据卷、多实例锁、强制重建后的配置持久化均通过。
+- 无登录公开下载：另一台干净 Runner 使用 curl 下载已发布镜像，docker load 后重复容器验证，通过。无需 GitHub token 或镜像仓库登录。
+- Linux构建及测试：https://github.com/dll315/pokemmo-wecom/actions/runs/41996336020
+- 匿名下载及启动：https://github.com/dll315/pokemmo-wecom/actions/runs/41996442477
+- 发布镜像仅 linux/amd64。ARM64 可从源码构建，未实际启动验证，不宣称双架构均已验证。
+- 数据源：本机一次成功读取中文头目“大奶罐 / 城都 / 39号道路”；明雷记录示例为 unknown 位置，状态接口返回 missing，程序拒绝将其视为有效在场报点。后续本机请求发生超时；GitHub Runner 实时数据检查得到源站HTTP403。该步骤是独立的非阻断外部服务检查，CI整体成功不表示源站连接成功。
+- 未验证用户Linux服务器对源站的连接，也未向真实企业微信群发送消息。部署后须检查后台源站状态并完成机器人测试。容器正常启动不代表外部数据源正常。
+- 当前镜像和源码没有用户机器人地址、GitHub访问凭据或本机运行数据。
+
+下文为之前版本的历史检查记录，不代表本次目标服务器已验证。
+
 验证日期：2026-10-12。运行环境：Windows，Node.js 24.19.0。目标部署环境：Linux / NAS，Node 24 Docker 官方镜像。
 
 ## 自动检查
