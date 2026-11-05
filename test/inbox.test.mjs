@@ -32,3 +32,7 @@ test('未知消息保留中文原文；空对象拒绝，地区过滤和目标�
 test('后台常驻工作线程无需手动点击即可发送回调，启动时不访问源站',()=>fixture(async({inbox,monitor,sent})=>{
  monitor.start({webhookOnly:true});try{inbox.receive({content:'Alpha Jynx 自动发送测试'});const end=Date.now()+4000;while(!sent.length&&Date.now()<end)await new Promise(r=>setTimeout(r,50));assert.equal(sent.length,1);}finally{await monitor.stop();}
 }));
+test('从旧版升级后停用遗留轮询任务，避免发送线程再次访问被拒绝的接口',()=>fixture(async({store,monitor})=>{
+ const now=Date.now();store.state.outbox.push({id:'legacy',key:'swarm:1',targetId:'default',fingerprint:'legacy',event:{key:'swarm:1',id:1,kind:'swarm',pokemon:'Jynx',region:'Unova',location:'Route 8',reportedAt:now,expiresAt:now+600000,originalExpiresAt:now+600000,verified:true,status:'active'},status:'pending',createdAt:now,nextAttemptAt:0,attempts:0});
+ new WebhookInbox({store,translator:new Translator()});assert.equal(store.state.outbox[0].status,'skipped');await monitor.deliverOne();
+}));

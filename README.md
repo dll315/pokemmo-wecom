@@ -1,6 +1,6 @@
 # PokeMMO 中文报点助手
 
-## v1.3.0：改为官网主动回调（当前默认）
+## v1.3.1：改为官网主动回调（当前默认）
 
 为解决服务器访问 Alphapedia 历史页和 ntfy 的403，当前版本默认不再轮询这些接口。改为 Alphapedia → 本网站 → 企业微信。不使用 n8n，也不需要申请额外 API 密钥。
 
@@ -20,8 +20,8 @@
 ### 从1.2.1升级（Linux amd64，保留配置）
 
 ```sh
-curl -fL --retry 3 https://github.com/dll315/pokemmo-wecom/releases/download/v1.3.0/pokemmo-wecom-linux-amd64.tar.gz -o pokemmo-image-v1.3.0.tar.gz
-docker load -i pokemmo-image-v1.3.0.tar.gz
+curl -fL --retry 3 https://github.com/dll315/pokemmo-wecom/releases/download/v1.3.1/pokemmo-wecom-linux-amd64.tar.gz -o pokemmo-image-v1.3.1.tar.gz
+docker load -i pokemmo-image-v1.3.1.tar.gz
 docker stop pokemmo-wecom
 docker rm pokemmo-wecom
 docker run -d --name pokemmo-wecom --restart unless-stopped \

@@ -3,7 +3,7 @@ import {configuredTargets} from './targets.mjs';
 import {formatIncoming} from './incoming-format.mjs';
 function stable(v){if(Array.isArray(v))return v.map(stable);if(v&&typeof v==='object')return Object.fromEntries(Object.keys(v).sort().map(k=>[k,stable(v[k])]));return v;}
 export class WebhookInbox{
- constructor({store,translator,now=()=>Date.now()}){Object.assign(this,{store,translator,now});const s=store.state;s.receiveToken||=randomBytes(24).toString('hex');s.receipts||=[];store.save();}
+ constructor({store,translator,now=()=>Date.now()}){Object.assign(this,{store,translator,now});const s=store.state;s.receiveToken||=randomBytes(24).toString('hex');s.receipts||=[];for(const task of s.outbox)if(task.status==='pending'&&!task.incoming&&!task.test){task.status='skipped';task.error='已切换官网回调模式，旧轮询任务已停用';}store.save();}
  get path(){return '/receive/'+this.store.state.receiveToken;}
  receive(body){
   const s=this.store.state,now=this.now(),key=createHash('sha256').update(JSON.stringify(stable(body))).digest('hex');
