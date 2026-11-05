@@ -18,3 +18,5 @@ jobs:
           docker load -i image.tar.gz
       - name: Run downloaded image
         run: node scripts/smoke-container.mjs pokemmo-wecom:latest
+      - name: Verify public standalone update command
+        run: node scripts/test-release-update.mjs --public

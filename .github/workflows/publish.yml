@@ -24,17 +24,20 @@ jobs:
       - name: Verify actual container and persistence
         run: node scripts/smoke-container.mjs pokemmo-wecom:latest
       - name: Check deployment shell syntax
-        run: for script in deploy.sh update.sh scripts/manage-docker.sh; do sh -n "$script"; done
+        run: for script in deploy.sh update.sh update-source.sh scripts/manage-docker.sh; do sh -n "$script"; done
       - name: Verify install, update, data preservation and rollback
         run: node scripts/test-deployment.mjs
+      - name: Verify standalone release image update
+        run: node scripts/test-release-update.mjs
       - name: Export image and source
         run: |
           docker save pokemmo-wecom:latest | gzip > pokemmo-wecom-linux-amd64.tar.gz
           git archive --format=zip --output=pokemmo-wecom-source.zip HEAD
-          sha256sum pokemmo-wecom-linux-amd64.tar.gz pokemmo-wecom-source.zip > SHA256SUMS
+          cp scripts/manage-docker.sh manage-docker.sh
+          sha256sum pokemmo-wecom-linux-amd64.tar.gz pokemmo-wecom-source.zip update.sh manage-docker.sh > SHA256SUMS
       - name: Publish verified release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           VERSION=$(node -p 'require("./package.json").version')
-          gh release create "v${VERSION}" pokemmo-wecom-linux-amd64.tar.gz pokemmo-wecom-source.zip SHA256SUMS --target "$GITHUB_SHA" --title "PokeMMO 中文报点助手 v${VERSION}" --notes-file docs/release-notes.md
+          gh release create "v${VERSION}" pokemmo-wecom-linux-amd64.tar.gz pokemmo-wecom-source.zip update.sh manage-docker.sh SHA256SUMS --target "$GITHUB_SHA" --title "PokeMMO 中文报点助手 v${VERSION}" --notes-file docs/release-notes.md

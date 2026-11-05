@@ -3,15 +3,17 @@ set -eu
 mode=${1:-}
 root=${2:-}
 case "$mode" in deploy|update) ;; *) printf '%s\n' '请运行 sh deploy.sh 或 sh update.sh'; exit 1;; esac
-[ -n "$root" ] && [ -f "$root/Dockerfile" ] || { printf '%s\n' '项目目录无效。'; exit 1; }
+[ -n "$root" ] && [ -d "$root" ] || { printf '%s\n' '项目目录无效。'; exit 1; }
 cd "$root"
 command -v docker >/dev/null 2>&1 || { printf '%s\n' '请先安装 Docker Engine，并确保当前用户可运行 docker。'; exit 1; }
 command -v flock >/dev/null 2>&1 || { printf '%s\n' '缺少 flock，请安装 util-linux 后重试。'; exit 1; }
 docker info >/dev/null 2>&1 || { printf '%s\n' 'Docker 未启动或当前用户无 Docker 权限。'; exit 1; }
-exec 9>"$root/.deploy.lock"
-flock -n 9 || { printf '%s\n' '当前项目已有部署或更新任务运行。'; exit 1; }
 name=${CONTAINER_NAME:-pokemmo-wecom}
 case "$name" in ''|-*|*[!a-zA-Z0-9_.-]*) printf '%s\n' 'CONTAINER_NAME 无效'; exit 1;; esac
+lock_root=${XDG_CACHE_HOME:-${HOME:-/tmp}/.cache}/pokemmo-wecom/locks
+mkdir -p "$lock_root"
+exec 9>"$lock_root/$name.lock"
+flock -n 9 || { printf '%s\n' '此容器已有部署或更新任务运行。'; exit 1; }
 backup="$name-backup-$(date +%s)-$$"
 probe="$name-preflight-$$"
 old_stopped=0
@@ -67,6 +69,7 @@ case "$mount_source" in ''|*,*) printf '%s\n' '数据挂载路径为空或包含
 case "$bind_ip" in *:*) binding="[$bind_ip]:$port:8787";; '') binding="$port:8787";; *) binding="$bind_ip:$port:8787";; esac
 image=${POKEMMO_IMAGE:-}
 if [ -z "$image" ]; then
+  [ -f Dockerfile ] || { printf '%s\n' '源码构建需要Dockerfile；镜像更新请使用新版update.sh。'; exit 1; }
   image="pokemmo-wecom:build-$(date +%s)-$$"
   printf '%s\n' '正在构建源码和运行应用测试，旧服务保持运行……'
   docker build -t "$image" .

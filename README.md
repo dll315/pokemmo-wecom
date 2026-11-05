@@ -1,42 +1,45 @@
 # PokeMMO 中文报点助手
 
-Linux 独立网站：接收 Alphapedia 的头目、明雷回调，整理中文资料，再推送到企业微信群。源码公开，无需 GitHub 密钥。
+以 **docker run 部署＋独立镜像更新命令** 为主。无需 Git、源码目录或在服务器构建镜像；不使用 Compose。源码公开，Linux amd64 已验证。
 
-## 首次部署
+## 首次部署：docker run
 
-服务器需安装 Git、Docker Engine 和 flock（一般由 util-linux 提供），当前用户需有 Docker 权限。部署过程不询问或设置密码，后台默认密码固定使用程序默认值 **123456**。
-
-```sh
-git clone https://github.com/dll315/pokemmo-wecom.git ~/pokemmo-wecom
-cd ~/pokemmo-wecom
-sh deploy.sh
-```
-
-完成后访问 `http://服务器IP:8787`；后台为 `/admin`。放行服务器8787端口。首次部署构建源码并运行应用测试，确认隔离容器可启动和默认密码有效后，才启动正式服务。无需安装 Node 或 npm 到服务器。
-
-默认容器名 `pokemmo-wecom`、命名卷 `pokemmo_data`、端口8787。若同名容器已存在，部署命令会停止并提示改用更新命令，不覆盖已有服务。
-
-## 后续更新（一条命令）
+先安装并启动 Docker。下载已发布镜像后直接运行，不设置密码，后台默认 **123456**：
 
 ```sh
-cd ~/pokemmo-wecom && sh update.sh
+(
+set -e
+curl -fL --retry 3 https://github.com/dll315/pokemmo-wecom/releases/latest/download/pokemmo-wecom-linux-amd64.tar.gz -o pokemmo-image.tar.gz
+docker load -i pokemmo-image.tar.gz
+docker run -d --name pokemmo-wecom --restart unless-stopped \
+  -p 8787:8787 -v pokemmo_data:/data \
+  --log-opt max-size=10m --log-opt max-file=3 pokemmo-wecom:latest
+)
 ```
 
-该命令执行：检查源码是否有未提交修改 → git pull --ff-only → 构建新版并运行测试 → 隔离数据预检查 → 替换容器 → 检查健康状态。构建或预检查失败时旧服务继续运行；替换后启动失败时尝试自动恢复原容器。
+访问 `http://服务器IP:8787`；后台为 `/admin`，默认密码123456。放行8787端口。已有同名容器时不要重复部署，直接使用下面的更新命令。
 
-更新会读取并保留旧容器的单个8787端口映射、`/data` 数据卷或目录挂载及 PUBLIC_ORIGIN。默认后台密码123456，无需密码参数。机器人配置、接收路径、记录保存在原数据卷中。不要删除数据卷。
+## 后续更新：下载镜像，不拉源码
 
-首次使用更新脚本时，旧容器可以是之前通过 docker run 创建的版本。如果服务器还没有源码目录：
+在服务器任意目录执行：
 
 ```sh
-git clone https://github.com/dll315/pokemmo-wecom.git ~/pokemmo-wecom
-cd ~/pokemmo-wecom
-sh update.sh
+curl -fL --retry 3 https://github.com/dll315/pokemmo-wecom/releases/latest/download/update.sh -o pokemmo-update.sh && sh pokemmo-update.sh
 ```
 
-若已有源码目录，直接进入它执行更新，不要重复克隆。源码有未提交修改时脚本会停止，不会强制覆盖。`sh update.sh --local` 只重建当前源码，不执行 git pull，适合已经手动同步源码的情况。
+需要 Docker、curl、sha256sum、flock（通常由util-linux提供）；不需要 Git、Node、npm 或 Dockerfile，也不要求填写密码。
 
-更新期间会有短暂重启。自动回滚指恢复旧容器和镜像，数据卷不会删除或回滚；跨版本数据格式不兼容时仍需使用自己的数据备份。自动脚本仅支持一个8787端口映射及可写的/data卷或目录；复杂自定义容器会在停止旧服务前拒绝自动迁移。
+更新流程：确定最新已发布版本 → 下载镜像和更新程序 → SHA256校验 → docker load → 隔离预检查 → docker run替换容器 → 健康检查。下载、校验或预检查失败时旧服务保持运行；替换后启动失败会尝试恢复旧容器。
+
+自动保留旧容器的单个8787端口映射、/data数据卷或目录挂载、PUBLIC_ORIGIN，以及机器人配置、接收地址和历史记录。默认密码123456。不要删除数据卷。无需重新配置官网回调。
+
+更新会有短暂重启；回滚恢复旧容器，不回滚数据卷。复杂自定义容器或缺少可写/data挂载会在停止旧服务前拒绝自动迁移。发布镜像仅适用于Linux amd64。
+
+若容器使用其他名称：先下载上述脚本，然后执行 `CONTAINER_NAME=你的容器名 sh pokemmo-update.sh`。指定版本可用 `POKEMMO_VERSION=v1.4.2 sh pokemmo-update.sh`。
+
+## 可选：源码维护方式
+
+只有希望自己修改源码时才需要Git。原源码构建命令 `sh deploy.sh` 保留；源码更新构建改为 `sh update-source.sh`，支持 `--local`。普通部署与更新请使用上面的docker run和镜像更新命令。
 
 ## 配置官网回调和企业微信
 
@@ -62,27 +65,13 @@ docker restart pokemmo-wecom
 docker exec pokemmo-wecom node -p "require('/app/package.json').version"
 ```
 
-初次部署可选择其他端口，例如 `PORT=8888 sh deploy.sh`；选择其他数据卷可使用 `DATA_VOLUME=其他卷名 sh deploy.sh`。更新时从旧容器读取这些配置，无需重复填写。使用其他容器名时，两条命令均指定同一个 CONTAINER_NAME。
+需要其他端口时，将docker run中的 `-p 8787:8787` 改为 `-p 8888:8787`；需要其他数据卷时修改 `-v` 左侧名称。更新命令会从原容器读取并保留这些配置。
 
-使用HTTPS反向代理时，首次部署可设置 `PUBLIC_ORIGIN=https://你的域名 sh deploy.sh`，并让代理保留实际Host。后续更新会保留该配置。
-
-## 仅使用 docker run
-
-仍可公开下载 [Release](https://github.com/dll315/pokemmo-wecom/releases/latest) 的 amd64 镜像包，docker load 后运行；部署无需填写密码：
-
-```sh
-curl -fL --retry 3 https://github.com/dll315/pokemmo-wecom/releases/latest/download/pokemmo-wecom-linux-amd64.tar.gz -o pokemmo-image.tar.gz
-docker load -i pokemmo-image.tar.gz
-docker run -d --name pokemmo-wecom --restart unless-stopped \
-  -p 8787:8787 -v pokemmo_data:/data \
-  --log-opt max-size=10m --log-opt max-file=3 pokemmo-wecom:latest
-```
-
-源码构建可按宿主机架构使用Node官方基础镜像；当前实际CI验证为Linux amd64，不能据此宣称所有ARM设备均已验证。镜像包仅amd64。
+使用HTTPS反向代理时，可在docker run中额外传入 `-e PUBLIC_ORIGIN=https://你的域名`，并让代理保留实际Host。后续更新会保留该配置；密码参数仍无需设置。
 
 ## 验证与限制
 
-应用测试：`npm test`。Linux容器测试：`node scripts/smoke-container.mjs pokemmo-wecom:latest`。部署/更新/失败回滚测试：`node scripts/test-deployment.mjs`（仅用于可丢弃的Linux测试环境，会创建及清理带测试前缀的Docker资源）。
+应用测试：`npm test`。Linux容器测试：`node scripts/smoke-container.mjs pokemmo-wecom:latest`。部署/更新/失败回滚测试：`node scripts/test-deployment.mjs`；独立镜像更新与校验失败测试：`node scripts/test-release-update.mjs`（仅用于可丢弃的Linux测试环境，会创建及清理带测试前缀的Docker资源）。
 
 镜像发布前必须通过应用测试、实际容器验证、部署/更新/回滚测试。详细记录见 [docs/verification.md](docs/verification.md)。服务器部署仍需能从公网接收官网请求并能连接企业微信；真实官网回调格式及真实群送达需部署后测试。
 
