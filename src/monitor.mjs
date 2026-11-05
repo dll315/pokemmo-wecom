@@ -110,6 +110,7 @@ export class Monitor {
     }finally{this.inFlightTargets.delete(targetId);}
   }
   resolve(id,action){
+    if(this.receiptQueries.has(id))throw new Error('正在查询QQ回执，请等待结果后操作');
     const task=this.store.state.outbox.find(t=>t.id===id);
     if(!task||!['failed','uncertain'].includes(task.status)||!['retry','dismiss'].includes(action))throw new Error('该任务不能执行此操作');
     if(action==='retry'){delete task.providerId;task.status='pending';task.nextAttemptAt=this.now();task.error='已由用户确认重试';}

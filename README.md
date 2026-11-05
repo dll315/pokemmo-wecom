@@ -2,7 +2,7 @@
 
 以 **docker run 部署＋独立镜像更新命令** 为主。无需 Git、源码目录或在服务器构建镜像；不使用 Compose。源码公开，Linux amd64 已验证。
 
-## v1.6.0：固定计时、订阅管理与QQ推送
+## v1.6.1：固定计时、订阅管理与QQ推送
 
 - 开始时间统一为本站收到推送的时刻；头目持续75分钟，明雷持续15分钟，明确显示北京时间的开始、结束与剩余分钟。社区报点可能晚于实际刷新，计时不代表已核实在场。
 - 重复回调不会重置计时；重启与升级按原接收时间计算，不给旧报点续时。当前栏目隐藏到期、撤回或提前结束记录，记录栏目保留查阅。
@@ -44,7 +44,7 @@ curl -fL --retry 3 https://github.com/dll315/pokemmo-wecom/releases/latest/downl
 
 更新会有短暂重启；回滚恢复旧容器，不回滚数据卷。复杂自定义容器或缺少可写/data挂载会在停止旧服务前拒绝自动迁移。发布镜像仅适用于Linux amd64。
 
-若容器使用其他名称：先下载上述脚本，然后执行 `CONTAINER_NAME=你的容器名 sh pokemmo-update.sh`。指定版本可用 `POKEMMO_VERSION=v1.6.0 sh pokemmo-update.sh`。
+若容器使用其他名称：先下载上述脚本，然后执行 `CONTAINER_NAME=你的容器名 sh pokemmo-update.sh`。指定版本可用 `POKEMMO_VERSION=v1.6.1 sh pokemmo-update.sh`。
 
 ## 可选：源码维护方式
 
