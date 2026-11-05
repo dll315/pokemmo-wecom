@@ -15,6 +15,11 @@ try{
   assert.equal((await fetch(base+'/api/state')).status,401);
   let auth=await api('/api/login',{password:'123456'});
   const target=(await api('/api/targets',{name:'容器持久化检查',url:'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=container-smoke-not-a-real-key'},auth.cookie)).data;
+  const inbox=(await api('/api/inbox',undefined,auth.cookie)).data;
+  assert.match(inbox.path,/^\/receive\/[a-f0-9]{48}$/);
+  const accepted=await api(inbox.path,{kind:'alpha',pokemon:'Jynx',region:'Unova',location:'Route 8',content:'【容器回调测试】Alpha Jynx'});
+  assert.equal(accepted.data.queued,1);
+  assert.equal((await api('/api/inbox',undefined,auth.cookie)).data.receipts.length,1);
   // Never enable sending or call the test-message API in this smoke check.
   docker(['run','-d','--name',other,'-v',volume+':/data',image]);await pause(2000);
   assert.equal(docker(['inspect','--format','{{.State.Status}}',other]),'exited','same data volume must be locked');
@@ -23,6 +28,7 @@ try{
   docker(['rm','-f',name]);start();await ready();auth=await api('/api/login',{password:'123456'});
   const state=(await api('/api/state',undefined,auth.cookie)).data;
   assert.ok(state.config.targets.some(t=>t.id===target.id));assert.equal(state.config.enabled,false);
+  const restoredInbox=(await api('/api/inbox',undefined,auth.cookie)).data;assert.equal(restoredInbox.path,inbox.path);assert.equal(restoredInbox.receipts.length,1);
   await api('/api/targets/delete',{id:target.id},auth.cookie);
   console.log('Container verified: startup, public page, backend auth, target API, writable /data, cross-container lock, crash/recreate persistence.');
 }catch(e){try{console.error(docker(['logs','--tail','80',name]));}catch{}throw e;}

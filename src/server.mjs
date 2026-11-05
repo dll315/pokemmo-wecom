@@ -21,7 +21,7 @@ function configuration(previous,body){
   if(next.enabled&&!configuredTargets(next).length)throw new Error('请先添加推送链接，再开启推送');
   return next;
 }
-export function createApp({store,monitor,translator,password='123456',publicOrigin='',catalog=[],natdex={}}){
+export function createApp({store,monitor,translator,inbox,password='123456',publicOrigin='',catalog=[],natdex={}}){
   if(typeof password!=='string'||password.length<6)throw new Error('后台密码必须至少6位');
   const expectedPassword=hash(password),sessions=new Map(),failures=new Map();
   function authenticated(req){const token=/(?:^|;\s*)pokemmo_session=([a-f0-9]{64})(?:;|$)/.exec(req.headers.cookie||'')?.[1];return token&&sessions.has(token)&&sessions.get(token)>Date.now();}
@@ -31,6 +31,7 @@ export function createApp({store,monitor,translator,password='123456',publicOrig
     function json(status,data){res.writeHead(status,{'Content-Type':'application/json; charset=utf-8'});res.end(JSON.stringify(data));}
     try{
       const url=new URL(req.url,'http://local');
+      if(req.method==='POST'&&inbox&&url.pathname===inbox.path){const result=inbox.receive(await readJson(req));json(200,result);return;}
       if(req.method==='GET'&&url.pathname==='/healthz'){json(monitor.stopping?503:200,{status:monitor.stopping?'stopped':'running'});return;}
       const staticFiles={'/':['index.html','text/html; charset=utf-8'],'/admin':['admin.html','text/html; charset=utf-8'],'/admin/':['admin.html','text/html; charset=utf-8'],'/public.js':['public.js','text/javascript; charset=utf-8'],'/public.css':['public.css','text/css; charset=utf-8'],'/app.js':['app.js','text/javascript; charset=utf-8'],'/style.css':['style.css','text/css; charset=utf-8'],'/admin.css':['admin.css','text/css; charset=utf-8']};
       if(req.method==='GET'&&staticFiles[url.pathname]){const[file,type]=staticFiles[url.pathname];res.writeHead(200,{'Content-Type':type});res.end(await readFile(new URL(`../web/${file}`,import.meta.url)));return;}
@@ -54,10 +55,11 @@ export function createApp({store,monitor,translator,password='123456',publicOrig
         res.setHeader('Set-Cookie',`pokemmo_session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=43200${publicOrigin.startsWith('https:')?'; Secure':''}`);json(200,{ok:true});return;
       }
       if(!authenticated(req)){json(401,{error:'请先登录管理页面'});return;}
+      if(req.method==='GET'&&url.pathname==='/api/inbox'&&inbox){json(200,inbox.view());return;}
       if(req.method==='GET'&&url.pathname==='/api/state'){
         const view=store.publicState(),translate=e=>({...e,pokemonZh:translator.pokemon(e.pokemon),locationZh:translator.location(e.location)});
         view.events=view.events.map(translate);view.tasks=view.tasks.map(t=>({...t,event:translate(t.event)}));
-        json(200,{...view,stopped:monitor.stopping});return;
+        json(200,{...view,stopped:monitor.stopping,inbox:inbox?.view()});return;
       }
       if(req.method==='POST'&&url.pathname==='/api/logout'){
         const token=/(?:^|;\s*)pokemmo_session=([a-f0-9]{64})/.exec(req.headers.cookie||'')?.[1];sessions.delete(token);res.setHeader('Set-Cookie','pokemmo_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0');json(200,{ok:true});return;

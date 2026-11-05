@@ -1,5 +1,37 @@
 # PokeMMO 中文报点助手
 
+## v1.3.0：改为官网主动回调（当前默认）
+
+为解决服务器访问 Alphapedia 历史页和 ntfy 的403，当前版本默认不再轮询这些接口。改为 Alphapedia → 本网站 → 企业微信。不使用 n8n，也不需要申请额外 API 密钥。
+
+1. 安装或升级后登录 `/admin`，最上方“官网主动推送入口”会显示专用接收地址。
+2. 从公网地址访问后台后复制地址（例如 `http://服务器IP:8787/receive/随机路径`），填入 Alphapedia Webhooks 的 **Target URL**。不要继续使用旧的 n8n 地址。
+3. Connector 选择可向自定义 HTTP 地址发送的类型（以官网实际选项为准），Post Language 选简体中文，Notification Scope 选 Both。保存并 Test。
+4. 在本站后台检查接收记录，点击“查看中文消息 / 原始数据”。填写企业微信机器人地址，测试成功，再开启全局自动推送。
+
+请求先持久化入队后响应200；收到请求不等于已经发群。发送结果在发送记录中显示。相同 JSON 内容24小时内去重；更新后的内容可作为另一条通知转发。不从报点正文猜测是否仍在场；暂停超过15分钟的待转发通知会跳过，避免恢复后突然发送旧消息。接收记录保留最近24小时，最多500条。
+
+支持结构化字段、Discord embeds、纯文本兜底。匹配精灵、地区、地点后补充中文捕捉资料；缺失字段明确标注。未知结构会保留原始通知供查看，不保证所有真实官网格式已能拆出详细字段。只有真实回调到达后才能确认该格式兼容。不会自动核实源站更正/撤回，除非官网另发消息。
+
+接收地址随机生成并保存在原数据卷中，不能公开分享。无需手动设置密钥；它本身就是可用于提交通知的私密地址。首页只展示已提取的名称和位置，不展示地址或原始正文。保持网站从公网可达并放行8787端口；官网是否允许HTTP地址以其保存和测试结果为准。
+
+旧版“已核实在场”卡片不用于展示新的回调记录，请查看首页顶部“官网推送记录”和后台接收记录。下方旧的轮询说明只适用于1.2.x，当前运行不再抓取网站或查询群怪状态。
+
+### 从1.2.1升级（Linux amd64，保留配置）
+
+```sh
+curl -fL --retry 3 https://github.com/dll315/pokemmo-wecom/releases/download/v1.3.0/pokemmo-wecom-linux-amd64.tar.gz -o pokemmo-image-v1.3.0.tar.gz
+docker load -i pokemmo-image-v1.3.0.tar.gz
+docker stop pokemmo-wecom
+docker rm pokemmo-wecom
+docker run -d --name pokemmo-wecom --restart unless-stopped \
+  -p 8787:8787 -v pokemmo_data:/data \
+  -e ADMIN_PASSWORD='填写你原来的后台密码' \
+  --log-opt max-size=10m --log-opt max-file=3 pokemmo-wecom:latest
+```
+
+不要删除 `pokemmo_data` 卷。原机器人配置保留。若之前使用自定义端口、卷名或 PUBLIC_ORIGIN，重新运行时保留这些原有参数。
+
 ## Linux：公开 GitHub 下载，docker run 部署
 
 源码公开：https://github.com/dll315/pokemmo-wecom 。无需 GitHub 密钥，也无需登录镜像仓库。GitHub Actions 先执行测试、构建 Linux 镜像并验证容器启动/持久化，成功后才发布 Release。

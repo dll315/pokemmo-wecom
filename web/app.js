@@ -11,11 +11,12 @@ function pName(e){return e.pokemonZh||e.pokemon;}
 function status(event){if(event.status==='removed')return'已撤回';if(event.status==='ended_early')return'提前结束';if(event.status==='expired'||event.expiresAt<=Date.now())return'已过期';if(!event.verified)return'尚未核实';return`约剩余 ${Math.ceil((event.expiresAt-Date.now())/60000)} 分钟`;}
 function render(){
   if(!state)return;
+  if(state.inbox){$('receive-url').value=location.origin+state.inbox.path;const list=$('incoming-receipts');list.replaceChildren();for(const r of state.inbox.receipts){const item=el('article',undefined,'event-item'),button=el('button','查看中文消息 / 原始数据','quiet');button.addEventListener('click',()=>{$('preview-content').textContent=r.preview+(r.raw?'\n\n原始 JSON：\n'+JSON.stringify(r.raw,null,2):'');$('preview').showModal();});item.append(el('strong',(r.kind==='alpha'?'头目':r.kind==='swarm'?'明雷':'官网通知')+' · '+(r.pokemon||'原文消息')),el('p','接收时间 '+time(r.at)+' · 已入队 '+r.queued+' 个目标'),button);list.append(item);}if(!list.childElementCount)list.append(el('p','等待官网首次推送。可在 Alphapedia 点击 Test 检查。','empty'));}
   const c=state.config;$('running-status').textContent=state.stopped?'监控已停止':c.enabled?'推送已开启':'推送已暂停';$('running-status').className='pill'+(state.stopped?' error':c.enabled?'':' warn');
   $('webhook-status').textContent=`${c.targets.length}个链接 · ${c.targets.filter(t=>t.enabled).length}个启用`;renderTargets();
   for(const [kind,label]of[['alpha','头目'],['swarm','群怪']]){
     const h=state.sources[kind]||{};const stale=h.lastSuccessAt&&Date.now()-h.lastSuccessAt>Math.max(90000,c.pollSeconds*2500);
-    $(kind+'-status').textContent=h.ok===false?'读取异常':stale?'数据更新延迟':h.ok?'已正常核对':'等待核对';
+    $(kind+'-status').textContent=h.mode==='webhook'?(h.lastSuccessAt?'已收到官网推送':'等待官网推送'):h.ok===false?'读取异常':stale?'数据更新延迟':h.ok?'已正常核对':'等待核对';
     $(kind+'-time').textContent=h.error||('最近成功：'+time(h.lastSuccessAt));
   }
   $('message-count').textContent=`${state.counts.sent} / ${state.counts.pending}`;$('attention-count').textContent=state.counts.attention;

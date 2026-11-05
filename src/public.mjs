@@ -22,7 +22,8 @@ export function createPublicView(state,tr,catalog=[],natdex={},now=Date.now()){
   const times=timeSlots(now);
   for(const slot of times.slots)slot.reported=allEvents.some(e=>e.kind==='alpha'&&e.reportedAt>=slot.startAt&&e.reportedAt<=slot.endAt);
   const sources={};for(const kind of ['alpha','swarm']){const health=state.sources[kind]||{};sources[kind]={ok:health.ok??null,lastSuccessAt:health.lastSuccessAt||null,message:health.ok===false?'源站数据暂未能完整核实，正在重试':''};}
-  return{now,sources,events,historyTotal:allEvents.length,latestAlpha:allEvents.find(e=>e.kind==='alpha')||null,
+  const incoming=(state.receipts||[]).slice(0,30).map(r=>({kind:r.kind,pokemonZh:tr.pokemon(r.pokemon)||'原文通知',regionZh:tr.region(r.region)||'未提供',locationZh:tr.location(r.location)||'未提供',receivedAt:r.at}));
+  return{now,mode:state.sources.alpha?.mode==='webhook'?'webhook':'poll',sources,incoming,events,historyTotal:allEvents.length,latestAlpha:allEvents.find(e=>e.kind==='alpha')||null,
     summary:{activeAlphas:allEvents.filter(e=>e.kind==='alpha'&&e.status==='active').length,activeSwarms:allEvents.filter(e=>e.kind==='swarm'&&e.status==='active').length,alphas24h:allEvents.filter(e=>e.kind==='alpha').length,swarms24h:allEvents.filter(e=>e.kind==='swarm').length,catalogSpecies:new Set(catalog.map(e=>e.pokemon)).size,catalogEntries:catalog.length},
     regions:['Kanto','Johto','Hoenn','Sinnoh','Unova'].map(region=>({region,regionZh:tr.region(region),latest:allEvents.find(e=>e.kind==='swarm'&&e.region===region&&e.status==='active')||allEvents.find(e=>e.kind==='swarm'&&e.region===region)||null})),...times};
 }

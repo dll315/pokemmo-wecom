@@ -10,7 +10,7 @@ export class Monitor {
   }
   get delivering(){return this.inFlightTargets.size>0;}
   target(id='default'){return configuredTargets(this.store.state.config).find(t=>t.id===id);}
-  selected(event,target=this.target()){const c=this.store.state.config;if(event.kind==='test')return !!target?.url;return c.enabled&&target?.enabled&&(event.kind==='alpha'?c.alphas&&target.alphas:c.swarms&&target.swarms)&&(!c.regions.length||c.regions.includes(event.region));}
+  selected(event,target=this.target()){const c=this.store.state.config;if(event.source==='webhook')return c.enabled&&target?.enabled&&(event.notificationKind==='alpha'?c.alphas&&target.alphas:event.notificationKind==='swarm'?c.swarms&&target.swarms:true)&&(!c.regions.length||c.regions.includes(event.region));if(event.kind==='test')return !!target?.url;return c.enabled&&target?.enabled&&(event.kind==='alpha'?c.alphas&&target.alphas:c.swarms&&target.swarms)&&(!c.regions.length||c.regions.includes(event.region));}
   sent(record,id){return record?.sentTargets?.[id]?.fingerprint||(id==='default'?record?.lastSentFingerprint:null);}
   discarded(record,id){return record?.discardedTargets?.[id]||(id==='default'?record?.lastDiscardedFingerprint:null);}
   readyAt(id){return this.store.state.targetNextAt?.[id]||(id==='default'?this.store.state.nextSendAt:0);}
@@ -65,8 +65,8 @@ export class Monitor {
       }
       if(task.status!=='pending')return;
       const latest=state.records[task.key];
-      if(!task.test&&latest?.fingerprint!==task.fingerprint&&latest?.fingerprint!==eventFingerprint(task.event)){task.status='skipped';task.error='网站报点已更新，旧任务已跳过';this.store.save();return;}
-      if(!task.test){
+      if(!task.test&&!task.incoming&&latest?.fingerprint!==task.fingerprint&&latest?.fingerprint!==eventFingerprint(task.event)){task.status='skipped';task.error='网站报点已更新，旧任务已跳过';this.store.save();return;}
+      if(!task.test&&!task.incoming){
         const verifiedFingerprint=eventFingerprint(task.event),verifiedId=this.taskId(task.key,verifiedFingerprint,targetId);
         const collision=state.outbox.find(t=>t!==task&&t.id===verifiedId);
         if(collision){
@@ -86,7 +86,7 @@ export class Monitor {
       if(terminalCorrection&&now-task.event.reportedAt>3*3600000){task.status='skipped';task.error='更正记录过旧';this.store.save();return;}
       // Recheck after the awaited source request: the user may have paused.
       const target=this.target(targetId);if(!this.selected(task.event,target)||this.stopping)return;
-      const payload=task.test?{msgtype:'text',text:{content:`【测试消息】${target.name} · PokeMMO 中文报点连接测试\n发送时间：${beijingTime(this.now())}（北京时间）\n这不是实际头目或群怪报点。`}}:formatNotification(task.event,this.translator,this.now(),task.correction,findAlphaDetails(task.event,this.catalog));
+      const payload=task.incoming?task.payload:task.test?{msgtype:'text',text:{content:`【测试消息】${target.name} · PokeMMO 中文报点连接测试\n发送时间：${beijingTime(this.now())}（北京时间）\n这不是实际头目或群怪报点。`}}:formatNotification(task.event,this.translator,this.now(),task.correction,findAlphaDetails(task.event,this.catalog));
       task.status='sending';task.targetName=target.name;task.attempts++;task.attemptedAt=this.now();state.targetNextAt[targetId]=this.now()+3500;if(targetId==='default')state.nextSendAt=state.targetNextAt[targetId];this.store.save();
       const result=await this.send(target.url,payload);
       task.error=result.error||'';
@@ -141,6 +141,6 @@ export class Monitor {
   }
   schedule(kind,delay){if(this.stopping)return;clearTimeout(this.scanTimers[kind]);this.scanTimers[kind]=setTimeout(()=>void this.scan(kind).catch(e=>this.fatal(e)),delay);}
   fatal(error){this.stopping=true;console.error('持久化或监控流程异常，已停止发送：',error.message);this.onFatal?.(error);}
-  start(){this.schedule('alpha',0);this.schedule('swarm',1500);this.worker=setInterval(()=>{for(let i=0;i<4;i++)void this.deliverOne().catch(e=>this.fatal(e));},1000);}
+  start({webhookOnly=false}={}){if(!webhookOnly){this.schedule('alpha',0);this.schedule('swarm',1500);}this.worker=setInterval(()=>{for(let i=0;i<4;i++)void this.deliverOne().catch(e=>this.fatal(e));},1000);}
   async stop(){this.stopping=true;for(const t of Object.values(this.scanTimers))clearTimeout(t);clearInterval(this.worker);this.source.close?.();while(this.delivering||this.activeScans.size)await new Promise(r=>setTimeout(r,50));}
 }

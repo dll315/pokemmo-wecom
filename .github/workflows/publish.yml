@@ -23,10 +23,6 @@ jobs:
         run: docker build -t pokemmo-wecom:latest .
       - name: Verify actual container and persistence
         run: node scripts/smoke-container.mjs pokemmo-wecom:latest
-      - name: Check live source (external service may be unavailable)
-        continue-on-error: true
-        timeout-minutes: 3
-        run: npm run check:live
       - name: Export image and source
         run: |
           docker save pokemmo-wecom:latest | gzip > pokemmo-wecom-linux-amd64.tar.gz
