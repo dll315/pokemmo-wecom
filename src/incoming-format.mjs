@@ -1,4 +1,6 @@
 import {readFileSync} from 'node:fs';
+import {buildCatalog} from './public.mjs';
+import {findAlphaDetails} from './wecom.mjs';
 const SOURCE_CATALOG=JSON.parse(readFileSync(new URL('../data/alpha-catalog.json',import.meta.url),'utf8'));
 export function formatIncoming(input,translator){
 const DICTIONARIES={...translator.maps,catalog:SOURCE_CATALOG};
@@ -11,10 +13,11 @@ const obj=body.data&&typeof body.data==='object'?{...body,...body.data}:body;
 const clean=v=>String(v??'').replace(/<@[^>]*>/g,'').replace(/[<>]/g,'').trim();
 const norm=v=>clean(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9\u4e00-\u9fff]/g,'');
 const fields={};
+for(const [key,value]of Object.entries(obj))fields[norm(key)]=value;
 for(const embed of body.embeds??[])for(const f of embed.fields??[])fields[norm(f.name)]=f.value;
 const pick=(...keys)=>{for(const key of keys){const v=obj[key]??fields[norm(key)];if(v!==undefined&&v!==null&&v!=='')return v;}return '';};
 const raw=[body.content,body.message,body.text,...(body.embeds??[]).flatMap(e=>[e.title,e.description,...(e.fields??[]).map(f=>`${f.name}: ${f.value}`)])].filter(v=>typeof v==='string'&&v.trim()).join('\n');
-const originalLink=pick('url','alphaUrl','swarmUrl','link')||(body.embeds??[]).find(e=>e.url)?.url;
+const originalLink=pick('url','alphaUrl','swarmUrl','link')||(body.embeds??[]).find(e=>e.url)?.url||raw.match(/https:\/\/alpha\.pokemmotools\.org\/(?:alpha|swarm)-list\?[^\s<>)]*/i)?.[0];
 // n8n Code 沙箱不保证提供 URL / URLSearchParams；只解析可信源站链接。
 const query=Object.create(null);
 const params={get:key=>query[key]??null};
@@ -42,14 +45,15 @@ function canonical(category,value){
 const pokemon=canonical('pokemon',pick('pokemon','pokemonName','Pokemon Name','species','Pokémon','宝可梦','宝可梦名称','精灵','精灵名称')||params.get('pokemon'));
 const region=canonical('region',pick('region','地区')||params.get('region'));
 const location=canonical('location',pick('location','位置','地点','具体位置')||params.get('location'));
-const hint=clean(pick('kind','type','eventType'))+' '+raw;
-const kind=/alpha|头目/i.test(hint)?'头目':/swarm|明雷|大量出现/i.test(hint)?'明雷（大量出现）':'报点';
+const explicit=clean(pick('kind','type','eventType'));
+const hint=raw.replace(/https?:\/\/\S+/gi,'')+' '+sourceLink.replace(/^https:\/\/alpha\.pokemmotools\.org/i,'').replace(/swarm-list/g,'swarm').replace(/alpha-list/g,'alpha');
+const kind=/^(?:alpha|头目)$/i.test(explicit)?'头目':/^(?:swarm|明雷|大量出现)$/i.test(explicit)?'明雷（大量出现）':/\balpha\b|头目/i.test(hint)?'头目':/\bswarm\b|明雷|大量出现/i.test(hint)?'明雷（大量出现）':'报点';
 function tr(category,v){return DICTIONARIES[category]?.[v]||v||'未提供';}
 function translated(v){let out=String(v);for(const cat of ['pokemon','region','location','ability','move']){
   const dict=DICTIONARIES[cat]||{};
   for(const key of Object.keys(dict).sort((a,b)=>b.length-a.length)){
     const escaped=key.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-    out=out.replace(new RegExp('(?<![A-Za-z])'+escaped+'(?![A-Za-z])','g'),()=>dict[key]);
+    out=out.replace(new RegExp('(?<![A-Za-z])'+escaped+'(?![A-Za-z])','gi'),()=>dict[key]);
   }
 }return out;}
 function time(v){
@@ -62,10 +66,12 @@ function time(v){
 }
 if(!pokemon&&!raw)throw new Error('无法识别报点：请检查 Alphapedia Test 返回的消息结构');
 const lines=[`## PokeMMO ${kind}提醒`,`**宝可梦：** ${tr('pokemon',pokemon)}`,`**地区：** ${tr('region',region)}`,`**位置：** ${tr('location',location)}`];
+const details=kind==='头目'?findAlphaDetails({pokemon,region,location},buildCatalog(SOURCE_CATALOG,translator)):null;
 const catalog=DICTIONARIES.catalog?.[region]?.[location]||[];
 const detail=catalog.find(row=>norm(row.name)===norm(pokemon))?.data;
 if(detail&&kind==='头目'){
-  lines.push(`**具体地点：** ${tr('location',detail['Specific Location'])}`,`**特性：** ${tr('ability',detail.Ability)}`,`**招式：** ${(detail.Moveset||[]).map(v=>tr('move',v)).join('、')||'未提供'}`,`**通行技能：** ${(detail.HMs||[]).map(v=>tr('move',v)).join('、')||'无需额外秘传技能'}`);
+  lines.push(`**具体地点：** ${details.specificLocationZh}`,`**特性：** ${details.abilityZh}`,`**招式：** ${details.movesZh.join('、')||'未提供'}`,`**通行技能（秘传／HM）：** ${details.hmsKnown?(details.hmsZh.join('、')||'源站未列出额外通行技能'):'暂无资料'}`);
+  if(details.mapSourceUrl)lines.push(`[查看位置地图](${details.mapSourceUrl})`);else lines.push('**位置地图：** 源站暂无此地点的图片。');
   if(detail['Location Notes'])lines.push(`**前往条件：** ${tr('notes',detail['Location Notes'])}`);
   if(detail.Notes?.length)lines.push(`**捕捉备注：** ${detail.Notes.map(v=>tr('notes',v)).join('；')}`);
 }else if(kind==='头目')lines.push('**捕捉资料：** 未匹配到该精灵在此地点的资料，请以游戏为准。');
@@ -77,6 +83,6 @@ const footer=`\n[查看来源](${sourceLink})\n> 社区报点可能延迟、更�
 const bytes=s=>Array.from(s).reduce((n,c)=>n+(c.codePointAt(0)>65535?4:c.codePointAt(0)>2047?3:c.codePointAt(0)>127?2:1),0);
 let content=lines.join('\n');
 if(bytes(content+footer)>4000){const chars=Array.from(content);let size=bytes(content);while(chars.length&&size+bytes('\n…（内容过长已截断）'+footer)>4000)size-=bytes(chars.pop());content=chars.join('')+'\n…（内容过长已截断）';}
-return {payload:{msgtype:'markdown',markdown:{content:content+footer}},pokemon,region,location,kind:kind==='头目'?'alpha':kind.startsWith('明雷')?'swarm':'unknown'};
+return {payload:{msgtype:'markdown',markdown:{content:content+footer}},details,pokemon,region,location,kind:kind==='头目'?'alpha':kind.startsWith('明雷')?'swarm':'unknown'};
 
 }

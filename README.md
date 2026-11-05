@@ -1,5 +1,15 @@
 # PokeMMO 中文报点助手
 
+## v1.4.0：完整头目资料与位置图
+
+- 中文通知包含精灵、地区、具体地点、特性、对应地点的招式、所需秘传/通行技能、前往条件及捕捉备注。这里的“通行技能”来自源站 HMs 字段，不猜测具体技能机编号。
+- 从源站重新获取310个地点组合，38张位置原图对应其中45个组合。图片随镜像提供，网站和推送中的“查看位置地图”可直接使用本站图片，不要求部署服务器临时访问外部图床。无图地点明确提示，不使用其他地点的图片。
+- 首页回调记录新增“招式、通行技能与位置图”按钮，头目资料详情页可查看原尺寸地图。源图保留原作者的箭头和文字，旁边显示中文地点、条件和技能。
+- 修复描述内来源链接无法提取地点、大小写字段和中文名称匹配、域名中的alpha导致明雷类型误判、关闭推送类型后未知通知仍入队的问题。
+- 升级保持 `pokemmo_data` 卷，原机器人配置、接收地址和默认密码123456保留。无需重新配置官网回调。
+
+升级命令见下方，将下载版本替换为 `v1.4.0` 即可；也可 `git pull` 后重新 `docker build`，再重建容器。
+
 ## v1.3.1：改为官网主动回调（当前默认）
 
 为解决服务器访问 Alphapedia 历史页和 ntfy 的403，当前版本默认不再轮询这些接口。改为 Alphapedia → 本网站 → 企业微信。不使用 n8n，也不需要申请额外 API 密钥。
@@ -17,11 +27,11 @@
 
 旧版“已核实在场”卡片不用于展示新的回调记录，请查看首页顶部“官网推送记录”和后台接收记录。下方旧的轮询说明只适用于1.2.x，当前运行不再抓取网站或查询群怪状态。
 
-### 从1.2.1升级（Linux amd64，保留配置）
+### 从1.2.x／1.3.x升级（Linux amd64，保留配置）
 
 ```sh
-curl -fL --retry 3 https://github.com/dll315/pokemmo-wecom/releases/download/v1.3.1/pokemmo-wecom-linux-amd64.tar.gz -o pokemmo-image-v1.3.1.tar.gz
-docker load -i pokemmo-image-v1.3.1.tar.gz
+curl -fL --retry 3 https://github.com/dll315/pokemmo-wecom/releases/download/v1.4.0/pokemmo-wecom-linux-amd64.tar.gz -o pokemmo-image-v1.4.0.tar.gz
+docker load -i pokemmo-image-v1.4.0.tar.gz
 docker stop pokemmo-wecom
 docker rm pokemmo-wecom
 docker run -d --name pokemmo-wecom --restart unless-stopped \

@@ -4,6 +4,7 @@ import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { validateWebhook, formatNotification, findAlphaDetails } from './wecom.mjs';
 import { createPublicView } from './public.mjs';
 import { configuredTargets, upsertTarget, deleteTarget, targetView, setLegacyWebhook } from './targets.mjs';
+import {mapAsset} from './maps.mjs';
 
 function hash(value){return createHash('sha256').update(String(value)).digest();}
 async function readJson(req){
@@ -31,7 +32,8 @@ export function createApp({store,monitor,translator,inbox,password='123456',publ
     function json(status,data){res.writeHead(status,{'Content-Type':'application/json; charset=utf-8'});res.end(JSON.stringify(data));}
     try{
       const url=new URL(req.url,'http://local');
-      if(req.method==='POST'&&inbox&&url.pathname===inbox.path){const result=inbox.receive(await readJson(req));json(200,result);return;}
+      if(req.method==='POST'&&inbox&&url.pathname===inbox.path){const result=inbox.receive(await readJson(req),{origin:publicOrigin||`${req.socket.encrypted?'https':'http'}://${req.headers.host}`});json(200,result);return;}
+      if(req.method==='GET'&&url.pathname.startsWith('/maps/')){const asset=mapAsset(url.pathname);if(!asset){json(404,{error:'位置图片不存在'});return;}const bytes=await readFile(new URL('../web'+asset.path,import.meta.url));res.writeHead(200,{'Content-Type':asset.mime,'Cache-Control':'public, max-age=86400'});res.end(bytes);return;}
       if(req.method==='GET'&&url.pathname==='/healthz'){json(monitor.stopping?503:200,{status:monitor.stopping?'stopped':'running'});return;}
       const staticFiles={'/':['index.html','text/html; charset=utf-8'],'/admin':['admin.html','text/html; charset=utf-8'],'/admin/':['admin.html','text/html; charset=utf-8'],'/public.js':['public.js','text/javascript; charset=utf-8'],'/public.css':['public.css','text/css; charset=utf-8'],'/app.js':['app.js','text/javascript; charset=utf-8'],'/style.css':['style.css','text/css; charset=utf-8'],'/admin.css':['admin.css','text/css; charset=utf-8']};
       if(req.method==='GET'&&staticFiles[url.pathname]){const[file,type]=staticFiles[url.pathname];res.writeHead(200,{'Content-Type':type});res.end(await readFile(new URL(`../web/${file}`,import.meta.url)));return;}

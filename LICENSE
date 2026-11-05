@@ -1,6 +1,7 @@
 The license below applies to the source code written for this project.
 Third-party reference data and images retain their respective ownership;
-see data/SOURCES.md for attribution. Pokemon images are loaded remotely
+see data/SOURCES.md for attribution. Location maps in web/maps retain their original authorship; see data/SOURCES.md.
+Pokemon images are loaded remotely
 from PokeAPI and are not included in this repository.
 
 MIT License

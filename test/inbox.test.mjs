@@ -36,3 +36,11 @@ test('从旧版升级后停用遗留轮询任务，避免发送线程再次访�
  const now=Date.now();store.state.outbox.push({id:'legacy',key:'swarm:1',targetId:'default',fingerprint:'legacy',event:{key:'swarm:1',id:1,kind:'swarm',pokemon:'Jynx',region:'Unova',location:'Route 8',reportedAt:now,expiresAt:now+600000,originalExpiresAt:now+600000,verified:true,status:'active'},status:'pending',createdAt:now,nextAttemptAt:0,attempts:0});
  new WebhookInbox({store,translator:new Translator()});assert.equal(store.state.outbox[0].status,'skipped');await monitor.deliverOne();
 }));
+test('关闭头目和明雷类型后未知类型消息也不得绕过用户选项发送',()=>fixture(async({store,inbox})=>{
+ store.state.config.alphas=false;store.state.config.swarms=false;const r=inbox.receive({content:'官网通知，无可识别的类型'});assert.equal(r.queued,0);
+}));
+test('推送中的位置图链接指向本站静态图片，图片可直接读取且未知路径返回404',()=>fixture(async({store,inbox,base})=>{
+ const response=await fetch(base+inbox.path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:'alpha',pokemon:'Lairon',region:'Hoenn',location:'Granite Cave'})});assert.equal(response.status,200);
+ const receipt=store.state.receipts[0];assert.ok(receipt.preview.includes(base+receipt.details.mapPath));const image=await fetch(base+receipt.details.mapPath);assert.equal(image.status,200);assert.match(image.headers.get('Content-Type'),/^image\//);assert.ok((await image.arrayBuffer()).byteLength>1000);
+ assert.equal((await fetch(base+'/maps/does-not-exist.png')).status,404);
+}));

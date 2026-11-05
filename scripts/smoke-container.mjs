@@ -17,9 +17,10 @@ try{
   const target=(await api('/api/targets',{name:'容器持久化检查',url:'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=container-smoke-not-a-real-key'},auth.cookie)).data;
   const inbox=(await api('/api/inbox',undefined,auth.cookie)).data;
   assert.match(inbox.path,/^\/receive\/[a-f0-9]{48}$/);
-  const accepted=await api(inbox.path,{kind:'alpha',pokemon:'Jynx',region:'Unova',location:'Route 8',content:'【容器回调测试】Alpha Jynx'});
+  const accepted=await api(inbox.path,{kind:'alpha',pokemon:'Lairon',region:'Hoenn',location:'Granite Cave',content:'【容器回调测试】Alpha Lairon'});
   assert.equal(accepted.data.queued,1);
   assert.equal((await api('/api/inbox',undefined,auth.cookie)).data.receipts.length,1);
+  const received=(await api('/api/inbox',undefined,auth.cookie)).data.receipts[0];assert.match(received.preview,/铁尾/);assert.match(received.preview,/闪光/);assert.ok(received.preview.includes(base+received.details.mapPath));const map=await fetch(base+received.details.mapPath);assert.equal(map.status,200);assert.match(map.headers.get('content-type'),/^image\//);
   // Never enable sending or call the test-message API in this smoke check.
   docker(['run','-d','--name',other,'-v',volume+':/data',image]);await pause(2000);
   assert.equal(docker(['inspect','--format','{{.State.Status}}',other]),'exited','same data volume must be locked');
