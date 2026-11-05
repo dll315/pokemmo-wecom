@@ -3,3 +3,4 @@ runtime/
 node_modules/
 artifacts/
 *.zip
+.deploy.lock
