@@ -1,5 +1,15 @@
 # 交付验证记录
 
+## 2026-11-05：v1.4.2 docker run＋独立镜像更新（本节优先）
+
+- README主流程改为下载已发布镜像、docker load、docker run首次部署；后续一条curl下载update.sh并执行。无需Git、源码目录或服务器构建，默认密码123456，无密码参数。
+- update.sh现在独立解析最新Release，下载镜像和更新程序，SHA256校验后再加载并替换容器。原源码更新方式移到update-source.sh。
+- 92项应用测试、Linux真实容器验证和源代码部署/更新/启动失败回滚检查通过。
+- 新增真实Docker＋独立HTTP发布文件测试：只用docker run创建旧服务，在无Git/无源码目录执行镜像更新，保留端口、数据卷、机器人、接收路径及默认密码；损坏校验清单时更新失败，旧容器StartedAt不变。构建及测试：https://github.com/dll315/pokemmo-wecom/actions/runs/42008814318
+- 从GitHub正式公开Release匿名下载镜像并启动，以及通过真实最新Release地址运行独立更新命令，均通过：https://github.com/dll315/pokemmo-wecom/actions/runs/42009036364
+- 发布：https://github.com/dll315/pokemmo-wecom/releases/tag/v1.4.2 。包含镜像、update.sh、manage-docker.sh及SHA256SUMS。
+- 未直接登录用户服务器执行部署；用户可对现有容器直接运行README更新命令，无需先克隆源码。测试未向真实企业微信群发消息。
+
 ## 2026-11-05：v1.4.1 独立部署与更新命令（本节优先）
 
 - 新增 `sh deploy.sh` 和 `sh update.sh`。默认密码123456，脚本不传入ADMIN_PASSWORD。更新默认git pull --ff-only，可选择--local仅重建已同步源码。README重写为当前部署、迁移和后续更新说明。
