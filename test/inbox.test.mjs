@@ -46,5 +46,5 @@ test('推送中的位置图链接指向本站静态图片，图片可直接读�
 }));
 test('升级旧回调记录时补齐标题与起止字段，更新未发送格式且不重复入队',()=>fixture(async({store,inbox,monitor,sent})=>{
  inbox.receive({kind:'alpha',pokemon:'Jynx',region:'Unova',location:'Route 8',startAt:'2026-11-05T10:00:00Z',endAt:'2026-11-05T11:15:00Z'});const r=store.state.receipts[0];delete r.title;delete r.timing;delete r.formatVersion;r.preview='旧格式';store.state.outbox[0].payload={msgtype:'markdown',markdown:{content:'旧格式'}};
- new WebhookInbox({store,translator:await Translator.load()});assert.equal(r.title,'合众 头目 迷唇姐');assert.equal(r.timing.startAt,1793872800000);assert.equal(store.state.outbox.length,1);assert.equal(sent.length,0);await monitor.deliverOne();assert.equal(sent.length,1);assert.equal(sent[0].markdown.content.split('\n')[0],'合众 头目 迷唇姐');
+ new WebhookInbox({store,translator:await Translator.load()});assert.equal(r.title,'合众 头目 迷唇姐');assert.equal(r.timing.startAt,r.at);assert.equal(store.state.outbox.length,1);assert.equal(sent.length,0);await monitor.deliverOne();assert.equal(sent.length,1);assert.equal(sent[0].markdown.content.split('\n')[0],'合众 头目 迷唇姐');
 }));

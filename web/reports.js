@@ -8,10 +8,11 @@ function phase(r){
  if(Number.isFinite(t.startAt)&&t.startAt>Date.now())return'upcoming';
  return Number.isFinite(t.startAt)&&Number.isFinite(t.endAt)?'in-window':'unknown';
 }
-function phaseLabel(r){return{'in-window':'源站时间范围内',ended:'按源站时间已结束',upcoming:'源站开始时间未到',unknown:'起止时间待确认',invalid:'时间异常，请核实',removed:'源站已撤回'}[phase(r)];}
+function phaseLabel(r){return{'in-window':'按推送时间计时中',ended:'按计时规则已结束',upcoming:'开始时间未到',unknown:'起止时间待确认',invalid:'时间异常，请核实',removed:'源站已撤回'}[phase(r)];}
 function timings(r,box){
  const t=r.timing||{};const grid=element('dl',undefined,'report-times');
  for(const [name,value]of [['开始时间',t.startText||'源站未提供'],['结束时间',t.endText||'源站未提供']]){const row=element('div');row.append(element('dt',name),element('dd',value));grid.append(row);}
+ if(t.basis==='receipt-policy'&&t.endAt>Date.now())box.append(element('p','剩余约 '+Math.ceil((t.endAt-Date.now())/60000)+' 分钟 · 共 '+t.durationMinutes+' 分钟','report-countdown'));
  box.append(grid,element('p',(t.startSource||'源站未提供')+'；'+(t.endSource||'源站未提供'),'note'),element('p','接收时间：'+date(r.receivedAt)+'（北京时间）','note'));
 }
 function reportDetail(r){

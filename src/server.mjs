@@ -32,7 +32,8 @@ export function createApp({store,monitor,translator,inbox,password='123456',publ
     function json(status,data){res.writeHead(status,{'Content-Type':'application/json; charset=utf-8'});res.end(JSON.stringify(data));}
     try{
       const url=new URL(req.url,'http://local');
-      if(req.method==='POST'&&inbox&&url.pathname===inbox.path){const result=inbox.receive(await readJson(req),{origin:publicOrigin||`${req.socket.encrypted?'https':'http'}://${req.headers.host}`});json(200,result);return;}
+      const subscription=inbox?.match(url.pathname);
+      if(req.method==='POST'&&subscription){const result=inbox.receive(await readJson(req),{subscriptionId:subscription.id,origin:publicOrigin||`${req.socket.encrypted?'https':'http'}://${req.headers.host}`});json(200,result);return;}
       if(req.method==='GET'&&url.pathname.startsWith('/maps/')){const asset=mapAsset(url.pathname);if(!asset){json(404,{error:'位置图片不存在'});return;}const bytes=await readFile(new URL('../web'+asset.path,import.meta.url));res.writeHead(200,{'Content-Type':asset.mime,'Cache-Control':'public, max-age=86400'});res.end(bytes);return;}
       if(req.method==='GET'&&url.pathname==='/healthz'){json(monitor.stopping?503:200,{status:monitor.stopping?'stopped':'running'});return;}
       const staticFiles={'/':['index.html','text/html; charset=utf-8'],'/admin':['admin.html','text/html; charset=utf-8'],'/admin/':['admin.html','text/html; charset=utf-8'],'/public.js':['public.js','text/javascript; charset=utf-8'],'/public.css':['public.css','text/css; charset=utf-8'],'/app.js':['app.js','text/javascript; charset=utf-8'],'/style.css':['style.css','text/css; charset=utf-8'],'/admin.css':['admin.css','text/css; charset=utf-8']};
@@ -59,6 +60,9 @@ export function createApp({store,monitor,translator,inbox,password='123456',publ
       }
       if(!authenticated(req)){json(401,{error:'请先登录管理页面'});return;}
       if(req.method==='GET'&&url.pathname==='/api/inbox'&&inbox){json(200,inbox.view());return;}
+      if(req.method==='POST'&&url.pathname==='/api/subscriptions'&&inbox){json(200,inbox.saveSubscription(await readJson(req)));return;}
+      if(req.method==='POST'&&url.pathname==='/api/subscriptions/delete'&&inbox){inbox.deleteSubscription((await readJson(req)).id);json(200,{ok:true});return;}
+      if(req.method==='POST'&&url.pathname==='/api/receipt'){const result=await monitor.checkReceipt((await readJson(req)).id);json(200,result);return;}
       if(req.method==='GET'&&url.pathname==='/api/state'){
         const view=store.publicState(),translate=e=>({...e,pokemonZh:translator.pokemon(e.pokemon),locationZh:translator.location(e.location)});
         view.events=view.events.map(translate);view.tasks=view.tasks.map(t=>({...t,event:translate(t.event)}));

@@ -1,3 +1,4 @@
+import {sendTarget,channelRateKey,checkQmsgReceipt} from './channels.mjs';
 import { eventFingerprint, applySwarmStatus, isActive } from './events.mjs';
 import { formatNotification, sendWebhook, findAlphaDetails } from './wecom.mjs';
 import { configuredTargets } from './targets.mjs';
@@ -5,15 +6,15 @@ import { randomUUID } from 'node:crypto';
 import { beijingTime } from './i18n.mjs';
 
 export class Monitor {
-  constructor({store,source,translator,send=sendWebhook,now=()=>Date.now(),onFatal,catalog=[]}){
-    Object.assign(this,{store,source,translator,send,now,onFatal,catalog});this.inFlightTargets=new Set();this.activeScans=new Set();this.stopping=false;this.scanTimers={};this.worker=null;
+  constructor({store,source,translator,send=sendTarget,queryReceipt=checkQmsgReceipt,now=()=>Date.now(),onFatal,catalog=[]}){
+    Object.assign(this,{store,source,translator,send,queryReceipt,now,onFatal,catalog});this.inFlightTargets=new Set();this.activeScans=new Set();this.stopping=false;this.scanTimers={};this.worker=null;this.receiptQueries=new Set();
   }
   get delivering(){return this.inFlightTargets.size>0;}
   target(id='default'){return configuredTargets(this.store.state.config).find(t=>t.id===id);}
   selected(event,target=this.target()){const c=this.store.state.config;if(event.source==='webhook')return c.enabled&&target?.enabled&&(event.notificationKind==='alpha'?c.alphas&&target.alphas:event.notificationKind==='swarm'?c.swarms&&target.swarms:(c.alphas&&target.alphas||c.swarms&&target.swarms))&&(!c.regions.length||c.regions.includes(event.region));if(event.kind==='test')return !!target?.url;return c.enabled&&target?.enabled&&(event.kind==='alpha'?c.alphas&&target.alphas:c.swarms&&target.swarms)&&(!c.regions.length||c.regions.includes(event.region));}
   sent(record,id){return record?.sentTargets?.[id]?.fingerprint||(id==='default'?record?.lastSentFingerprint:null);}
   discarded(record,id){return record?.discardedTargets?.[id]||(id==='default'?record?.lastDiscardedFingerprint:null);}
-  readyAt(id){return this.store.state.targetNextAt?.[id]||(id==='default'?this.store.state.nextSendAt:0);}
+  readyAt(id){return Math.max(this.store.state.targetNextAt?.[channelRateKey(this.target(id))]||0,this.store.state.targetNextAt?.[id]||(id==='default'?this.store.state.nextSendAt:0));}
   taskId(key,fingerprint,id){return id==='default'?`${key}:${fingerprint}`:`${id}:${key}:${fingerprint}`;}
   async observe(events){
     const now=this.now();const checked=[];let rejected=0;
@@ -87,8 +88,9 @@ export class Monitor {
       // Recheck after the awaited source request: the user may have paused.
       const target=this.target(targetId);if(!this.selected(task.event,target)||this.stopping)return;
       const payload=task.incoming?task.payload:task.test?{msgtype:'text',text:{content:`【测试消息】${target.name} · PokeMMO 中文报点连接测试\n发送时间：${beijingTime(this.now())}（北京时间）\n这不是实际头目或群怪报点。`}}:formatNotification(task.event,this.translator,this.now(),task.correction,findAlphaDetails(task.event,this.catalog));
-      task.status='sending';task.targetName=target.name;task.attempts++;task.attemptedAt=this.now();state.targetNextAt[targetId]=this.now()+3500;if(targetId==='default')state.nextSendAt=state.targetNextAt[targetId];this.store.save();
-      const result=await this.send(target.url,payload);
+      task.status='sending';task.targetName=target.name;task.attempts++;task.attemptedAt=this.now();state.targetNextAt[targetId]=this.now()+3500;if(targetId==='default')state.nextSendAt=state.targetNextAt[targetId];if(target.type==='qmsg')state.targetNextAt[channelRateKey(target)]=state.targetNextAt[targetId];this.store.save();
+      const result=await this.send(target.url,payload,{target});
+      if(result.providerId)task.providerId=result.providerId;
       task.error=result.error||'';
       if(result.outcome==='success'){
         task.status='sent';task.sentAt=this.now();
@@ -96,6 +98,7 @@ export class Monitor {
         this.store.log('info',`${target.name}：已推送${task.correction?'更正':'报点'} ${this.translator.pokemon(task.event.pokemon)}`);
       }else if(result.outcome==='retry'){
         task.status='pending';task.nextAttemptAt=this.now()+Math.max(60000,result.retryAfter||0);state.targetNextAt[targetId]=Math.max(state.targetNextAt[targetId],task.nextAttemptAt);if(targetId==='default')state.nextSendAt=state.targetNextAt[targetId];
+        if(target.type==='qmsg')state.targetNextAt[channelRateKey(target)]=state.targetNextAt[targetId];
         this.store.log('warn',task.error||'机器人暂时拒绝请求，稍后重试');
       }else{
         task.status=result.outcome==='failed'?'failed':'uncertain';this.store.log('error',task.error||'发送结果待确认');
@@ -109,9 +112,21 @@ export class Monitor {
   resolve(id,action){
     const task=this.store.state.outbox.find(t=>t.id===id);
     if(!task||!['failed','uncertain'].includes(task.status)||!['retry','dismiss'].includes(action))throw new Error('该任务不能执行此操作');
-    if(action==='retry'){task.status='pending';task.nextAttemptAt=this.now();task.error='已由用户确认重试';}
+    if(action==='retry'){delete task.providerId;task.status='pending';task.nextAttemptAt=this.now();task.error='已由用户确认重试';}
     else{task.status='dismissed';task.error='用户已确认忽略';const record=this.store.state.records[task.key];if(record){record.discardedTargets||={};record.discardedTargets[task.targetId||'default']=task.fingerprint;if(!task.targetId||task.targetId==='default')record.lastDiscardedFingerprint=task.fingerprint;}}
     this.store.save();
+  }
+  async checkReceipt(id){
+    const task=this.store.state.outbox.find(t=>t.id===id),target=this.target(task?.targetId);
+    if(!task||task.status!=='uncertain'||!Number.isSafeInteger(task.providerId)||target?.type!=='qmsg')throw Error('该任务没有可查询的QQ回执');
+    if(this.receiptQueries.has(id))throw Error('正在查询，请稍后');
+    this.receiptQueries.add(id);
+    try{const result=await this.queryReceipt(target.url,task.providerId);
+      if(task.status!=='uncertain')return{outcome:'unchanged'};
+      if(result.outcome==='success'){task.status='sent';task.sentAt=this.now();const record=this.store.state.records[task.key];if(record){record.sentTargets||={};record.sentTargets[target.id]={fingerprint:task.fingerprint,at:task.sentAt};}}
+      else if(result.outcome==='failed')task.status='failed';
+      task.error=result.error||'';this.store.save();return{outcome:result.outcome,error:task.error};
+    }finally{this.receiptQueries.delete(id);}
   }
   async sendTest(targetId){
     const state=this.store.state;

@@ -1,7 +1,7 @@
 import {readFileSync} from 'node:fs';
 import {buildCatalog} from './public.mjs';
 import {findAlphaDetails} from './wecom.mjs';
-import {reportTiming,parseReportTime} from './report-time.mjs';
+import {reportTiming,parseReportTime,receiptPolicy} from './report-time.mjs';
 const SOURCE_CATALOG=JSON.parse(readFileSync(new URL('../data/alpha-catalog.json',import.meta.url),'utf8'));
 export function formatIncoming(input,translator,{receivedAt=Date.now()}={}){
 const DICTIONARIES={...translator.maps,catalog:SOURCE_CATALOG};
@@ -62,9 +62,10 @@ function time(v){return parseReportTime(v).text;}
 if(!pokemon&&!raw)throw new Error('无法识别报点：请检查 Alphapedia Test 返回的消息结构');
 const title=`${region?tr('region',region):'地区待确认'} ${kind==='头目'?'头目':kind.startsWith('明雷')?'明雷':'通知'} ${pokemon?tr('pokemon',pokemon):'名称待确认'}`;
 const matchingLink=[['pokemon',pokemon],['region',region],['location',location]].every(([key,value])=>params.get(key)&&canonical(key,params.get(key))===value);
-const timing=reportTiming(pick,{linkEnd:matchingLink&&/^https:\/\/alpha\.pokemmotools\.org\/(?:alpha|swarm)-list(?:\?|$)/i.test(sourceLink)?params.get('timestamp'):''});
+const sourceTiming=reportTiming(pick,{linkEnd:matchingLink&&/^https:\/\/alpha\.pokemmotools\.org\/(?:alpha|swarm)-list(?:\?|$)/i.test(sourceLink)?params.get('timestamp'):''});
+const timing=receiptPolicy(kind==='头目'?'alpha':kind.startsWith('明雷')?'swarm':'unknown',receivedAt,sourceTiming);
 const lines=[title,`**开始时间：** ${timing.startText}`,`**结束时间：** ${timing.endText}`,`**时间依据：** ${timing.startSource}；${timing.endSource}`,`**宝可梦：** ${tr('pokemon',pokemon)}`,`**地区：** ${tr('region',region)}`,`**位置：** ${tr('location',location)}`];
-if(timing.invalidOrder)lines.splice(3,0,'**时间异常：** 结束早于开始，请核实源站；不能据此判断仍在场。');
+if(sourceTiming.invalidOrder)lines.splice(3,0,'**源站时间异常：** 结束早于开始；当前倒计时按本站接收推送时间和固定时长计算。');
 const details=kind==='头目'?findAlphaDetails({pokemon,region,location},buildCatalog(SOURCE_CATALOG,translator)):null;
 const catalog=DICTIONARIES.catalog?.[region]?.[location]||[];
 const detail=catalog.find(row=>norm(row.name)===norm(pokemon))?.data;
@@ -82,6 +83,6 @@ const footer=`\n[查看来源](${sourceLink})\n> 社区报点可能延迟、更�
 const bytes=s=>Array.from(s).reduce((n,c)=>n+(c.codePointAt(0)>65535?4:c.codePointAt(0)>2047?3:c.codePointAt(0)>127?2:1),0);
 let content=lines.join('\n');
 if(bytes(content+footer)>4000){const chars=Array.from(content);let size=bytes(content);while(chars.length&&size+bytes('\n…（内容过长已截断）'+footer)>4000)size-=bytes(chars.pop());content=chars.join('')+'\n…（内容过长已截断）';}
-return {payload:{msgtype:'markdown',markdown:{content:content+footer}},title,timing,reportedStatus:clean(pick('status','状态')),details,pokemon,region,location,kind:kind==='头目'?'alpha':kind.startsWith('明雷')?'swarm':'unknown'};
+return {payload:{msgtype:'markdown',markdown:{content:content+footer}},title,timing,sourceTiming,reportedStatus:clean(pick('status','状态')),details,pokemon,region,location,kind:kind==='头目'?'alpha':kind.startsWith('明雷')?'swarm':'unknown'};
 
 }

@@ -22,3 +22,9 @@ export function reportTiming(pick,{linkEnd=''}={}){
  const s=parseReportTime(start||reported),e=parseReportTime(end||linkEnd);
  return{startAt:s.at,endAt:e.at,startText:s.text,endText:e.text,startSource:start?'源站开始时间':reported?'源站报点时间（实际刷新可能更早）':'源站未提供',endSource:end?'源站结束时间':linkEnd?'源站链接的预计结束时间':'源站未提供',invalidOrder:s.at!==null&&e.at!==null&&e.at<s.at};
 }
+export function receiptPolicy(kind,receivedAt,sourceTiming){
+ const durationMinutes=kind==='alpha'?75:kind==='swarm'?15:null;
+ if(durationMinutes===null)return sourceTiming;
+ const endAt=receivedAt+durationMinutes*60000;
+ return{startAt:receivedAt,endAt,startText:parseReportTime(receivedAt).text,endText:parseReportTime(endAt).text,startSource:'本站收到推送的时间',endSource:`按${kind==='alpha'?'头目':'明雷'}固定持续${durationMinutes}分钟计算`,basis:'receipt-policy',durationMinutes,invalidOrder:false};
+}

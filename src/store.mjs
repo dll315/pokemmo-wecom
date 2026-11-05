@@ -4,6 +4,7 @@ import { hostname } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { validateWebhook } from './wecom.mjs';
 import { configuredTargets, targetView } from './targets.mjs';
+import {validateChannelTarget} from './channels.mjs';
 
 export const defaults={enabled:false,webhookUrl:'',targets:[],alphas:true,swarms:true,pollSeconds:30,minRemainingSeconds:20,regions:[]};
 function newState(){return{version:1,config:{...defaults,regions:[],targets:[]},records:{},outbox:[],sources:{alpha:{},swarm:{}},logs:[],nextSendAt:0,targetNextAt:{}};}
@@ -12,9 +13,10 @@ function validEvent(e){return object(e)&&typeof e.key==='string'&&['alpha','swar
 function validState(s){
   if(!object(s)||s.version!==1||!object(s.config)||!object(s.records)||!Array.isArray(s.outbox)||!object(s.sources?.alpha)||!object(s.sources?.swarm)||!Array.isArray(s.logs)||!Number.isFinite(s.nextSendAt)||s.nextSendAt<0)return false;
   const c=s.config;
+  if(s.subscriptions!==undefined){if(!Array.isArray(s.subscriptions)||s.subscriptions.length>20)return false;const ids=new Set(),tokens=new Set();for(const t of s.subscriptions){if(!object(t)||typeof t.id!=='string'||!t.id||typeof t.name!=='string'||!t.name||typeof t.token!=='string'||!/^([a-f0-9]{48})$/.test(t.token)||!['enabled','alphas','swarms'].every(k=>typeof t[k]==='boolean')||ids.has(t.id)||tokens.has(t.token))return false;ids.add(t.id);tokens.add(t.token);}}
   if(!['enabled','alphas','swarms'].every(k=>typeof c[k]==='boolean')||typeof c.webhookUrl!=='string'||!Number.isInteger(c.pollSeconds)||c.pollSeconds<15||c.pollSeconds>3600||!Number.isInteger(c.minRemainingSeconds)||c.minRemainingSeconds<0||c.minRemainingSeconds>300||!Array.isArray(c.regions)||c.regions.some(r=>!['Kanto','Johto','Hoenn','Sinnoh','Unova'].includes(r)))return false;
   try{if(c.webhookUrl)validateWebhook(c.webhookUrl);}catch{return false;}
-  if(c.targets!==undefined){if(!Array.isArray(c.targets)||c.targets.length>20)return false;const ids=new Set(),urls=new Set();for(const t of c.targets){if(!object(t)||typeof t.id!=='string'||!t.id||typeof t.name!=='string'||!t.name||!['enabled','alphas','swarms'].every(k=>typeof t[k]==='boolean'))return false;try{validateWebhook(t.url);}catch{return false;}if(ids.has(t.id)||urls.has(t.url))return false;ids.add(t.id);urls.add(t.url);}}
+  if(c.targets!==undefined){if(!Array.isArray(c.targets)||c.targets.length>20)return false;const ids=new Set(),urls=new Set();for(const t of c.targets){if(!object(t)||typeof t.id!=='string'||!t.id||typeof t.name!=='string'||!t.name||!['enabled','alphas','swarms'].every(k=>typeof t[k]==='boolean'))return false;try{validateChannelTarget(t);}catch{return false;}if(ids.has(t.id)||urls.has(t.url+'|'+(t.groupId||'')))return false;ids.add(t.id);urls.add(t.url+'|'+(t.groupId||''));}}
   if(s.targetNextAt!==undefined&&(!object(s.targetNextAt)||Object.values(s.targetNextAt).some(n=>!Number.isFinite(n)||n<0)))return false;
   if(Object.entries(s.records).some(([key,r])=>!object(r)||!validEvent(r.event)||r.event.key!==key||typeof r.fingerprint!=='string'))return false;
   if(s.outbox.some(t=>!object(t)||typeof t.id!=='string'||typeof t.key!=='string'||!validEvent(t.event)||typeof t.fingerprint!=='string'||!['pending','sending','sent','failed','uncertain','skipped','dismissed'].includes(t.status)||!Number.isSafeInteger(t.attempts)||t.attempts<0||!Number.isFinite(t.createdAt)||!Number.isFinite(t.nextAttemptAt)))return false;
@@ -27,7 +29,7 @@ function atomicWrite(path,content){
   fs.renameSync(tmp,path);
   try{const fd=fs.openSync(resolve(path,'..'),'r');try{fs.fsyncSync(fd);}finally{fs.closeSync(fd);}}catch{/* Some platforms cannot fsync directories. */}
 }
-export function redact(text){return String(text).replace(/([?&]key=)[^\s&"'<>]+/gi,'$1[已隐藏]').replace(/https:\/\/qyapi\.weixin\.qq\.com[^\s"'<>]*/gi,'[企业微信机器人地址]');}
+export function redact(text){return String(text).replace(/https:\/\/qmsg\.zendee\.cn[^\s\"'<>]*/gi,'[QQ推送地址]').replace(/([?&]key=)[^\s&"'<>]+/gi,'$1[已隐藏]').replace(/https:\/\/qyapi\.weixin\.qq\.com[^\s"'<>]*/gi,'[企业微信机器人地址]');}
 export class Store {
   constructor(directory,{externalLock=false}={}){
     this.directory=resolve(directory);fs.mkdirSync(this.directory,{recursive:true,mode:0o700});
