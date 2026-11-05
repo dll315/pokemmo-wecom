@@ -24,7 +24,7 @@ jobs:
       - name: Verify actual container and persistence
         run: node scripts/smoke-container.mjs pokemmo-wecom:latest
       - name: Check deployment shell syntax
-        run: sh -n deploy.sh update.sh scripts/manage-docker.sh
+        run: for script in deploy.sh update.sh scripts/manage-docker.sh; do sh -n "$script"; done
       - name: Verify install, update, data preservation and rollback
         run: node scripts/test-deployment.mjs
       - name: Export image and source
