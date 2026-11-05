@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+const image='dll315/pokemmo-wecom';
+const tokenResponse=await fetch(`https://ghcr.io/token?${new URLSearchParams({service:'ghcr.io',scope:`repository:${image}:pull`})}`,{signal:AbortSignal.timeout(15000)});
+if(!tokenResponse.ok)throw new Error(`镜像尚不能匿名访问：HTTP ${tokenResponse.status}`);
+const {token}=await tokenResponse.json();
+const manifestResponse=await fetch(`https://ghcr.io/v2/${image}/manifests/latest`,{headers:{Authorization:`Bearer ${token}`,Accept:'application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json'},signal:AbortSignal.timeout(15000)});
+if(!manifestResponse.ok)throw new Error(`镜像尚不能匿名拉取：HTTP ${manifestResponse.status}`);
+const manifest=await manifestResponse.json();const platforms=(manifest.manifests||[]).filter(m=>m.platform?.os==='linux').map(m=>m.platform.architecture);
+assert.ok(platforms.includes('amd64'));assert.ok(platforms.includes('arm64'));
+console.log(JSON.stringify({anonymous:true,image:'ghcr.io/'+image+':latest',platforms:[...new Set(platforms)],digest:manifestResponse.headers.get('docker-content-digest')},null,2));

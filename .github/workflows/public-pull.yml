@@ -1,0 +1,20 @@
+name: Verify Public Download
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  anonymous-deployment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - name: Download public image without login
+        run: |
+          curl --fail --location --retry 3 https://github.com/dll315/pokemmo-wecom/releases/latest/download/pokemmo-wecom-linux-amd64.tar.gz -o image.tar.gz
+          docker load -i image.tar.gz
+      - name: Run downloaded image
+        run: node scripts/smoke-container.mjs pokemmo-wecom:latest

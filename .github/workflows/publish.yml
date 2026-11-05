@@ -1,0 +1,40 @@
+name: Verify and Release Linux Docker
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  linux-docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - name: Test application
+        run: npm test
+      - name: Build Linux image
+        run: docker build -t pokemmo-wecom:latest .
+      - name: Verify actual container and persistence
+        run: node scripts/smoke-container.mjs pokemmo-wecom:latest
+      - name: Check live source (external service may be unavailable)
+        continue-on-error: true
+        timeout-minutes: 3
+        run: npm run check:live
+      - name: Export image and source
+        run: |
+          docker save pokemmo-wecom:latest | gzip > pokemmo-wecom-linux-amd64.tar.gz
+          git archive --format=zip --output=pokemmo-wecom-source.zip HEAD
+          sha256sum pokemmo-wecom-linux-amd64.tar.gz pokemmo-wecom-source.zip > SHA256SUMS
+      - name: Publish verified release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(node -p 'require("./package.json").version')
+          gh release create "v${VERSION}" pokemmo-wecom-linux-amd64.tar.gz pokemmo-wecom-source.zip SHA256SUMS --target "$GITHUB_SHA" --title "PokeMMO 中文报点助手 v${VERSION}" --notes-file docs/release-notes.md

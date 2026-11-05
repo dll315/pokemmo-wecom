@@ -1,0 +1,50 @@
+let state=null,authenticated=false,dirty=false,noticeTimer;
+const $=id=>document.getElementById(id);
+const names={Kanto:'关都',Johto:'城都',Hoenn:'丰缘',Sinnoh:'神奥',Unova:'合众'};
+function time(ms){if(!ms)return'尚未读取';return new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(new Date(ms));}
+function notify(message,error=false){$('notice').textContent=message;$('notice').className=error?'error':'';$('notice').hidden=false;clearTimeout(noticeTimer);noticeTimer=setTimeout(()=>$('notice').hidden=true,error?9000:5000);}
+async function api(path,body){const r=await fetch(path,{method:body===undefined?'GET':'POST',headers:body===undefined?{}:{'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body)});const d=await r.json();if(!r.ok){if(r.status===401&&path!=='/api/login')showLogin();throw new Error(d.error||'操作失败');}return d;}
+function showLogin(){authenticated=false;$('login-panel').hidden=false;$('dashboard').hidden=true;$('logout').hidden=true;}
+function showDashboard(){authenticated=true;$('login-panel').hidden=true;$('dashboard').hidden=false;$('logout').hidden=false;}
+function el(tag,text,className){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(className)e.className=className;return e;}
+function pName(e){return e.pokemonZh||e.pokemon;}
+function status(event){if(event.status==='removed')return'已撤回';if(event.status==='ended_early')return'提前结束';if(event.status==='expired'||event.expiresAt<=Date.now())return'已过期';if(!event.verified)return'尚未核实';return`约剩余 ${Math.ceil((event.expiresAt-Date.now())/60000)} 分钟`;}
+function render(){
+  if(!state)return;
+  const c=state.config;$('running-status').textContent=state.stopped?'监控已停止':c.enabled?'推送已开启':'推送已暂停';$('running-status').className='pill'+(state.stopped?' error':c.enabled?'':' warn');
+  $('webhook-status').textContent=`${c.targets.length}个链接 · ${c.targets.filter(t=>t.enabled).length}个启用`;renderTargets();
+  for(const [kind,label]of[['alpha','头目'],['swarm','群怪']]){
+    const h=state.sources[kind]||{};const stale=h.lastSuccessAt&&Date.now()-h.lastSuccessAt>Math.max(90000,c.pollSeconds*2500);
+    $(kind+'-status').textContent=h.ok===false?'读取异常':stale?'数据更新延迟':h.ok?'已正常核对':'等待核对';
+    $(kind+'-time').textContent=h.error||('最近成功：'+time(h.lastSuccessAt));
+  }
+  $('message-count').textContent=`${state.counts.sent} / ${state.counts.pending}`;$('attention-count').textContent=state.counts.attention;
+  if(!dirty){for(const id of ['enabled','alphas','swarms'])$(id).checked=c[id];$('poll').value=c.pollSeconds;$('remaining').value=c.minRemainingSeconds;for(const e of document.querySelectorAll('[name=region]'))e.checked=c.regions.includes(e.value);}
+  const events=$('events');events.replaceChildren();
+  for(const e of state.events.slice(0,12)){
+    const card=el('article',undefined,'event-item'),top=el('div',undefined,'event-top'),left=el('div');left.append(el('span',e.kind==='alpha'?'头目':'群怪','event-type'+(e.kind==='swarm'?' swarm':'')),el('strong',pName(e)));top.append(left,el('span',status(e),'small muted'));
+    const bottom=el('div',undefined,'event-bottom'),button=el('button','预览通知','quiet');button.addEventListener('click',()=>preview(e.key));bottom.append(el('span','报点 '+time(e.reportedAt)),button);
+    card.append(top,el('p',`${names[e.region]||e.region} · ${e.locationZh||e.location}`),bottom);events.append(card);
+  }
+  if(!events.childElementCount)events.append(el('p','近24小时暂无报点；程序仍在持续核对。','empty'));
+  const tasks=$('tasks');tasks.replaceChildren();
+  const labels={pending:'等待发送',sending:'发送中',sent:'已成功发送',uncertain:'送达待确认',failed:'发送失败',skipped:'已跳过',dismissed:'已忽略'};
+  for(const t of state.tasks){const row=el('tr'),name=el('td',`${t.test?'测试消息':(t.correction?'更正 · ':'')+(t.event.kind==='alpha'?'头目 · ':'群怪 · ')+pName(t.event)}`);name.append(el('small',t.targetName||'默认机器人','target-name-small'));row.append(name,el('td',time(t.createdAt)),el('td',labels[t.status]||t.status,'status-'+t.status));const detail=el('td');detail.append(el('div',t.error||'—','task-error'));if(['uncertain','failed'].includes(t.status)){for(const[action,label]of[['retry','确认后重试'],['dismiss','忽略']]){const button=el('button',label,'quiet');button.addEventListener('click',()=>resolve(t,action));detail.append(button);}}row.append(detail);tasks.append(row);}
+  if(!tasks.childElementCount){const row=el('tr'),cell=el('td','还没有发送任务','empty');cell.colSpan=4;row.append(cell);tasks.append(row);}
+  const logs=$('logs');logs.replaceChildren();for(const entry of state.logs.slice(0,30)){const row=el('div',undefined,'log '+entry.level);row.append(el('time',time(entry.at)),el('span',entry.message));logs.append(row);}if(!logs.childElementCount)logs.append(el('p','等待第一次核对。','empty'));
+}
+async function refresh(){try{state=await api('/api/state');showDashboard();render();}catch(e){if(authenticated)notify('管理页面更新失败：'+e.message,true);}}
+async function preview(key){try{const d=await api('/api/preview?key='+encodeURIComponent(key));$('preview-content').textContent=d.markdown.content;$('preview').showModal();}catch(e){notify(e.message,true);}}
+function resetTargetForm(){$('target-form').reset();$('target-id').value='';$('target-form-title').textContent='添加推送链接';$('cancel-target-edit').hidden=true;$('target-url').placeholder='https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=…';}
+function editTarget(target){$('target-id').value=target.id;$('target-name').value=target.name;$('target-url').value='';$('target-enabled').checked=target.enabled;$('target-alphas').checked=target.alphas;$('target-swarms').checked=target.swarms;$('target-form-title').textContent='编辑推送链接';$('cancel-target-edit').hidden=false;$('target-url').placeholder='已保存地址；留空保留，填写新地址则替换';$('target-form').scrollIntoView({behavior:'smooth',block:'center'});}
+function renderTargets(){const list=$('target-list');list.replaceChildren();for(const t of state.config.targets){const card=el('article',undefined,'target-item'),top=el('div',undefined,'target-heading');top.append(el('strong',t.name),el('span',t.enabled?'启用':'停用','pill'+(t.enabled?'':' warn')));const scopes=[t.alphas?'头目':'',t.swarms?'群怪':''].filter(Boolean).join(' / ')||'未选择类型';card.append(top,el('p',`企业微信机器人 · ${scopes}`));const buttons=el('div',undefined,'target-buttons');for(const[action,label]of[['edit','编辑'],['test','发送测试'],['toggle',t.enabled?'停用':'启用'],['delete','删除']]){const b=el('button',label,'quiet'+(action==='delete'?' remove-target':''));b.addEventListener('click',()=>targetAction(t,action,b));buttons.append(b);}card.append(buttons);list.append(card);}if(!list.childElementCount)list.append(el('p','尚未添加链接。先添加机器人，再开启全局推送。','note'));}
+async function targetAction(target,action,button){if(action==='edit'){editTarget(target);return;}if(action==='delete'&&!confirm('删除这个推送链接？后续报点将停止发送到该群。'))return;button.disabled=true;try{if(action==='test'){await api('/api/targets/test',{id:target.id});notify('测试消息已成功发送，请查看该群。');}else if(action==='toggle'){await api('/api/targets',{id:target.id,enabled:!target.enabled});notify(target.enabled?'链接已停用。':'链接已启用。');}else{await api('/api/targets/delete',{id:target.id});if($('target-id').value===target.id)resetTargetForm();notify('链接已删除。');}await refresh();}catch(e){notify(e.message,true);}finally{button.disabled=false;}}
+async function resolve(task,action){if(action==='retry'&&!confirm('请先查看企业微信群是否已经收到此消息。确认重试可能产生重复消息，是否继续？'))return;try{await api('/api/resolve',{id:task.id,action});notify(action==='retry'?'已确认重试；过期报点会自动跳过。':'已忽略该任务。');await refresh();}catch(e){notify(e.message,true);}}
+$('login-form').addEventListener('submit',async e=>{e.preventDefault();const button=e.submitter;button.disabled=true;try{await api('/api/login',{password:$('password').value});$('password').value='';await refresh();}catch(err){notify(err.message,true);}finally{button.disabled=false;}});
+$('logout').addEventListener('click',async()=>{try{await api('/api/logout',{});showLogin();state=null;}catch(e){notify(e.message,true);}});
+$('config-form').addEventListener('input',()=>{dirty=true;});
+$('config-form').addEventListener('submit',async e=>{e.preventDefault();const button=e.submitter;button.disabled=true;try{await api('/api/config',{enabled:$('enabled').checked,alphas:$('alphas').checked,swarms:$('swarms').checked,pollSeconds:Number($('poll').value),minRemainingSeconds:Number($('remaining').value),regions:[...document.querySelectorAll('[name=region]:checked')].map(e=>e.value)});dirty=false;notify('设置已保存。');await refresh();}catch(err){notify(err.message,true);}finally{button.disabled=false;}});
+$('target-form').addEventListener('submit',async e=>{e.preventDefault();const button=e.submitter;button.disabled=true;try{const id=$('target-id').value;await api('/api/targets',{...(id?{id}:{}),name:$('target-name').value,url:$('target-url').value,enabled:$('target-enabled').checked,alphas:$('target-alphas').checked,swarms:$('target-swarms').checked});resetTargetForm();notify('推送链接已保存。');await refresh();}catch(err){notify(err.message,true);}finally{button.disabled=false;}});
+$('cancel-target-edit').addEventListener('click',resetTargetForm);
+$('close-preview').addEventListener('click',()=>$('preview').close());
+function tick(){$('clock').textContent=time(Date.now())+' 北京时间';}tick();setInterval(tick,1000);setInterval(()=>{if(authenticated)void refresh();},5000);void refresh();

@@ -1,0 +1,10 @@
+runtime
+.env
+.git
+node_modules
+artifacts
+*.zip
+docs
+scripts
+README.md
+install.sh
