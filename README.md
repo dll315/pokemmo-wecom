@@ -2,7 +2,7 @@
 
 以 **docker run 部署＋独立镜像更新命令** 为主。无需 Git、源码目录或在服务器构建镜像；不使用 Compose。源码公开，Linux amd64 已验证。
 
-## v1.5.0：独立栏目与统一报点格式
+## v1.5.1：独立栏目与统一报点格式
 
 - 顶部导航改为当前报点、头目、明雷、报点记录、头目资料、使用说明六个栏目；支持重复点击、浏览器返回和栏目直达链接。手机端六个栏目全部可见。
 - 当前报点将头目和明雷分栏；头目/明雷栏目及记录页支持搜索、地区筛选和时间范围筛选。历史记录保留已结束和时间待确认记录，未知类型通知不会混入头目/明雷。
@@ -44,7 +44,7 @@ curl -fL --retry 3 https://github.com/dll315/pokemmo-wecom/releases/latest/downl
 
 更新会有短暂重启；回滚恢复旧容器，不回滚数据卷。复杂自定义容器或缺少可写/data挂载会在停止旧服务前拒绝自动迁移。发布镜像仅适用于Linux amd64。
 
-若容器使用其他名称：先下载上述脚本，然后执行 `CONTAINER_NAME=你的容器名 sh pokemmo-update.sh`。指定版本可用 `POKEMMO_VERSION=v1.5.0 sh pokemmo-update.sh`。
+若容器使用其他名称：先下载上述脚本，然后执行 `CONTAINER_NAME=你的容器名 sh pokemmo-update.sh`。指定版本可用 `POKEMMO_VERSION=v1.5.1 sh pokemmo-update.sh`。
 
 ## 可选：源码维护方式
 

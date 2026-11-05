@@ -28,7 +28,7 @@ function filtered(){const q=byId('feed-search').value.trim().toLowerCase(),regio
 function fillFeed(id,rows,limit=50){const box=byId(id);box.replaceChildren();for(const r of rows.slice(0,limit))box.append(reportCard(r));if(!rows.length)box.append(element('p','暂无符合条件的报点。可调整筛选条件；新消息到达后会自动显示。','empty'));if(rows.length>limit)box.append(element('p','显示最近'+limit+'条，可在报点记录中筛选查看更多。','note'));}
 function renderPanel(){
  if(!current)return;
- const rows=filtered();byId('feed-count').textContent='最近24小时 '+(current.incoming||[]).length+' 条 · 匹配 '+rows.length+' 条';
+ const rows=filtered();const scope=pageRoute==='alpha'?rows.filter(r=>r.kind==='alpha'):pageRoute==='swarm'?rows.filter(r=>r.kind==='swarm'):pageRoute==='live'?rows.filter(r=>['alpha','swarm'].includes(r.kind)&&!['ended','removed'].includes(phase(r))):pageRoute==='history'?rows.filter(r=>!byId('history-kind').value||r.kind===byId('history-kind').value):rows;byId('feed-count').textContent='最近24小时 '+(current.incoming||[]).length+' 条 · 当前栏目 '+scope.length+' 条';
  if(pageRoute==='live'){const recent=rows.filter(r=>!['ended','removed'].includes(phase(r)));fillFeed('live-alpha',recent.filter(r=>r.kind==='alpha'),10);fillFeed('live-swarm',recent.filter(r=>r.kind==='swarm'),10);}
  if(pageRoute==='alpha')fillFeed('alpha-feed',rows.filter(r=>r.kind==='alpha'));
  if(pageRoute==='swarm')fillFeed('swarm-feed',rows.filter(r=>r.kind==='swarm'));

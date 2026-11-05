@@ -1,7 +1,7 @@
 import {readFileSync} from 'node:fs';
 import {buildCatalog} from './public.mjs';
 import {findAlphaDetails} from './wecom.mjs';
-import {reportTiming} from './report-time.mjs';
+import {reportTiming,parseReportTime} from './report-time.mjs';
 const SOURCE_CATALOG=JSON.parse(readFileSync(new URL('../data/alpha-catalog.json',import.meta.url),'utf8'));
 export function formatIncoming(input,translator,{receivedAt=Date.now()}={}){
 const DICTIONARIES={...translator.maps,catalog:SOURCE_CATALOG};
@@ -57,14 +57,8 @@ function translated(v){let out=String(v);for(const cat of ['pokemon','region','l
     out=out.replace(new RegExp('(?<![A-Za-z])'+escaped+'(?![A-Za-z])','gi'),()=>dict[key]);
   }
 }return out;}
-function time(v){
-  if(v===undefined||v===null||v==='')return '未提供';
-  // 无时区字符串含义不明确，保留原文而不猜 UTC 或当地时间。
-  if(typeof v==='string'&&!/(?:Z|[+-]\d\d:\d\d)$/i.test(v))return clean(v)+'（来源未注明时区）';
-  const d=new Date(typeof v==='number'&&v<1e12?v*1000:v);
-  if(!Number.isFinite(d.getTime()))return clean(v)+'（时间格式待核实）';
-  return d.toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',hour12:false})+'（北京时间）';
-}
+function time(v){return parseReportTime(v).text;}
+
 if(!pokemon&&!raw)throw new Error('无法识别报点：请检查 Alphapedia Test 返回的消息结构');
 const title=`${region?tr('region',region):'地区待确认'} ${kind==='头目'?'头目':kind.startsWith('明雷')?'明雷':'通知'} ${pokemon?tr('pokemon',pokemon):'名称待确认'}`;
 const matchingLink=[['pokemon',pokemon],['region',region],['location',location]].every(([key,value])=>params.get(key)&&canonical(key,params.get(key))===value);
@@ -80,7 +74,7 @@ if(detail&&kind==='头目'){
   if(detail['Location Notes'])lines.push(`**前往条件：** ${tr('notes',detail['Location Notes'])}`);
   if(detail.Notes?.length)lines.push(`**捕捉备注：** ${detail.Notes.map(v=>tr('notes',v)).join('；')}`);
 }else if(kind==='头目')lines.push('**捕捉资料：** 未匹配到该精灵在此地点的资料，请以游戏为准。');
-lines.push(`**报点时间：** ${time(pick('reportedAt','reported_at','spawnedAt'))}`,`**接收时间：** ${time(new Date(receivedAt).toISOString())}`);
+lines.push(`**报点时间：** ${time(pick('reportedAt','reported_at','Report Time','报点时间'))}`,`**接收时间：** ${time(new Date(receivedAt).toISOString())}`);
 if(pick('status','状态'))lines.push(`**来源状态：** ${translated(clean(pick('status','状态')))}`);
 // 原文先限长，避免超长输入引起词表替换开销；只对显示文本做翻译。
 if(raw)lines.push('**原始报点（已替换可识别的中文名称）：**',translated(clean(raw).slice(0,5000)));
