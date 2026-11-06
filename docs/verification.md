@@ -1,5 +1,14 @@
 # 交付验证记录
 
+## 2026-11-06：v1.6.3 接收时间与类型证据（本节优先）
+
+- 根因复现：unknown类型的receiptPolicy返回源站时间；中文群怪、notification_type、嵌套事件、markdown正文、source_url未参与原解析；同时出现Alpha/Swarm时原逻辑优先Alpha。
+- 所有类型开始时间都使用接收时刻；明确头目+75分钟、群集+15分钟。未知类型不猜测结束时间，记录保留后台、不转发。官网首页不再充当具体来源链接。旧记录迁移保持原接收时间并更新未发送任务类型。
+- 118项测试与Edge桌面/手机检查通过。Linux真实容器、持久化、更新回滚与独立镜像更新通过：https://github.com/dll315/pokemmo-wecom/actions/runs/42148551153
+- 公开镜像下载和真实更新命令通过：https://github.com/dll315/pokemmo-wecom/actions/runs/42148748263
+- 发布：https://github.com/dll315/pokemmo-wecom/releases/tag/v1.6.3 。未获取用户服务器实际原始JSON，未直接部署到用户服务器，未宣称所有官网实际格式均已验证。
+
+
 ## 2026-11-06：v1.6.2 群集中文识别与精简通知（本节优先）
 
 - 112项应用测试通过，新增中文群集标题提取、群集位置说明/明确百分比、头目接收时间固定75分钟及不把catchRate参数当概率的检查。
