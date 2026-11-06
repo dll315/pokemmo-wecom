@@ -16,7 +16,7 @@ export function upsertTarget(config,input){
   const url=raw.trim()?(type==='qmsg'?validateQmsgUrl(raw.trim()):validateWebhook(raw.trim())):existing?.url;if(!url)throw new Error('新链接必须填写机器人推送地址');
   const groupId=type==='qmsg'?String(input.groupId??existing?.groupId??'').trim():'';
   const target={id:existing&&existing.url===url&&(existing.type||'wecom')===type&&(existing.groupId||'')===groupId?existing.id:randomUUID(),name,url,type,groupId};validateChannelTarget(target);
-  for(const key of ['enabled','alphas','swarms']){target[key]=input[key]??existing?.[key]??true;if(typeof target[key]!=='boolean')throw new Error('链接开关格式无效');}
+  for(const key of ['enabled','alphas','swarms','phenos']){target[key]=input[key]??existing?.[key]??true;if(typeof target[key]!=='boolean')throw new Error('链接开关格式无效');}
   if(targets.some(t=>t!==existing&&t.url===url&&(t.groupId||'')===groupId))throw new Error('这个机器人地址和目标已经添加，避免重复推送');
   if(!existing&&targets.length>=20)throw new Error('最多支持20个推送链接');
   if(existing)targets.splice(targets.indexOf(existing),1,target);else targets.push(target);
@@ -26,7 +26,7 @@ export function deleteTarget(config,id){
   const targets=configuredTargets(config);if(!targets.some(t=>t.id===id))throw new Error('推送链接不存在');
   const remaining=targets.filter(t=>t.id!==id);return{...config,targets:remaining,enabled:remaining.length?config.enabled:false,webhookUrl:remaining.find(t=>t.id==='default')?.url||''};
 }
-export function targetView(target){const{id,name,enabled,alphas,swarms}=target;return{id,name,enabled,alphas,swarms,type:target.type||'wecom',groupId:target.groupId||'',urlConfigured:!!target.url};}
+export function targetView(target){const{id,name,enabled,alphas,swarms}=target;return{id,name,enabled,alphas,swarms,phenos:target.phenos??true,type:target.type||'wecom',groupId:target.groupId||'',urlConfigured:!!target.url};}
 
 export function setLegacyWebhook(config,value){
   const url=validateWebhook(value);const targets=configuredTargets(config).map(t=>({...t}));

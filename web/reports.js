@@ -1,4 +1,4 @@
-const routes=new Set(['live','alpha','swarm','history','catalog','guide']);
+const routes=new Set(['live','alpha','swarm','pheno','history','catalog','guide']);
 let pageRoute='live',refreshing=false,catalogLoading=false;
 function phase(r){
  if(/^(removed|撤回|已撤回)$/i.test(r.reportedStatus||''))return'removed';
@@ -8,7 +8,7 @@ function phase(r){
  if(Number.isFinite(t.startAt)&&t.startAt>Date.now())return'upcoming';
  return Number.isFinite(t.startAt)&&Number.isFinite(t.endAt)?'in-window':'unknown';
 }
-function phaseLabel(r){return{'in-window':'按推送时间计时中',ended:'按计时规则已结束',upcoming:'开始时间未到',unknown:'起止时间待确认',invalid:'时间异常，请核实',removed:'源站已撤回'}[phase(r)];}
+function phaseLabel(r){return{'in-window':'按推送时间计时中',ended:'按计时规则已结束',upcoming:'开始时间未到',unknown:r.kind==='pheno'?'结束时间待确认':'起止时间待确认',invalid:'时间异常，请核实',removed:'源站已撤回'}[phase(r)];}
 function timings(r,box){
  const t=r.timing||{};const grid=element('dl',undefined,'report-times');
  for(const [name,value]of [['开始时间',t.startText||'源站未提供'],['结束时间',t.endText||'源站未提供']]){const row=element('div');row.append(element('dt',name),element('dd',value));grid.append(row);}
@@ -20,7 +20,7 @@ function reportDetail(r){
  else{byId('detail-title').textContent=r.title;const box=byId('detail-content');box.replaceChildren();timings(r,box);box.append(element('p',r.regionZh+' · '+r.locationZh),element('p',r.kind==='swarm'?'群集没有匹配的额外资料，不借用头目招式。':'暂无准确匹配的资料，请到管理后台查看原始通知。','note'));byId('catalog-detail').showModal();}
 }
 function reportCard(r){
- const card=element('article',undefined,'card report-card '+r.kind);const top=element('div',undefined,'report-card-heading');top.append(element('h3',r.title),element('span',r.kind==='alpha'?'头目':r.kind==='swarm'?'群集':'未识别通知','report-kind '+r.kind));
+ const card=element('article',undefined,'card report-card '+r.kind);const top=element('div',undefined,'report-card-heading');top.append(element('h3',r.title),element('span',r.kind==='alpha'?'头目':r.kind==='swarm'?'群集':r.kind==='pheno'?'奇遇':'类型待识别','report-kind '+r.kind));
  if(r.profile?.sprite)card.append(art({sprite:r.profile.sprite,pokemonZh:r.pokemonZh}));
  card.append(top,element('p',r.regionZh+' · '+r.locationZh,'report-place'),element('span',phaseLabel(r),'report-pill '+phase(r)));timings(r,card);
  if(r.profile){const p=r.profile;if(r.kind==='alpha'){if(p.maleRatio!==null)card.append(element('p','雄性比例：'+p.maleRatio+'%'));if(p.eggGroups?.length)card.append(element('p','蛋组：'+p.eggGroups.join('、')));if(!r.details){if(p.abilityZh)card.append(element('p','特性：'+p.abilityZh));if(p.movesZh?.length)card.append(element('p','配招：'+p.movesZh.join('、')));}}if(p.tier!==null)card.append(element('p','闪光等级（Tier）：'+p.tier));}
@@ -32,9 +32,10 @@ function filtered(){const q=byId('feed-search').value.trim().toLowerCase(),regio
 function fillFeed(id,rows,limit=50){const box=byId(id);box.replaceChildren();for(const r of rows.slice(0,limit))box.append(reportCard(r));if(!rows.length)box.append(element('p','暂无符合条件的报点。可调整筛选条件；新消息到达后会自动显示。','empty'));if(rows.length>limit)box.append(element('p','显示最近'+limit+'条，可在报点记录中筛选查看更多。','note'));}
 function renderPanel(){
  if(!current)return;
- const rows=filtered();const scope=pageRoute==='alpha'?rows.filter(r=>r.kind==='alpha'):pageRoute==='swarm'?rows.filter(r=>r.kind==='swarm'):pageRoute==='live'?rows.filter(r=>['alpha','swarm'].includes(r.kind)&&!['ended','removed'].includes(phase(r))):pageRoute==='history'?rows.filter(r=>!byId('history-kind').value||r.kind===byId('history-kind').value):rows;byId('feed-count').textContent='最近24小时 '+(current.incoming||[]).length+' 条 · 当前栏目 '+scope.length+' 条';
- if(pageRoute==='live'){const recent=rows.filter(r=>!['ended','removed'].includes(phase(r)));fillFeed('live-alpha',recent.filter(r=>r.kind==='alpha'),10);fillFeed('live-swarm',recent.filter(r=>r.kind==='swarm'),10);}
+ const rows=filtered();const scope=pageRoute==='alpha'?rows.filter(r=>r.kind==='alpha'):pageRoute==='swarm'?rows.filter(r=>r.kind==='swarm'):pageRoute==='pheno'?rows.filter(r=>r.kind==='pheno'):pageRoute==='live'?rows.filter(r=>['alpha','swarm','pheno'].includes(r.kind)&&!['ended','removed'].includes(phase(r))):pageRoute==='history'?rows.filter(r=>!byId('history-kind').value||r.kind===byId('history-kind').value):rows;byId('feed-count').textContent='最近24小时 '+(current.incoming||[]).length+' 条 · 当前栏目 '+scope.length+' 条';
+ if(pageRoute==='live'){const recent=rows.filter(r=>!['ended','removed'].includes(phase(r)));fillFeed('live-alpha',recent.filter(r=>r.kind==='alpha'),10);fillFeed('live-swarm',recent.filter(r=>r.kind==='swarm'),10);fillFeed('live-pheno',recent.filter(r=>r.kind==='pheno'),10);}
  if(pageRoute==='alpha')fillFeed('alpha-feed',rows.filter(r=>r.kind==='alpha'));
+ if(pageRoute==='pheno')fillFeed('pheno-feed',rows.filter(r=>r.kind==='pheno'));
  if(pageRoute==='swarm')fillFeed('swarm-feed',rows.filter(r=>r.kind==='swarm'));
  if(pageRoute==='history'){const kind=byId('history-kind').value,chosen=rows.filter(r=>!kind||r.kind===kind);fillFeed('history-feed',chosen,historyLimit);byId('more-history').hidden=chosen.length<=historyLimit;}
  if(pageRoute==='catalog')renderCatalog();

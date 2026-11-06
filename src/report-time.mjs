@@ -24,6 +24,7 @@ export function reportTiming(pick,{linkEnd=''}={}){
 }
 export function receiptPolicy(kind,receivedAt,sourceTiming){
  const durationMinutes=kind==='alpha'?75:kind==='swarm'?15:null;
+ if(kind==='pheno')return{startAt:receivedAt,startText:parseReportTime(receivedAt).text,startSource:'本站收到推送的时间',endAt:sourceTiming?.endAt??null,endText:sourceTiming?.endAt?sourceTiming.endText:'来源未给出结束时间',endSource:'奇遇使用来源明确的结束时间',basis:'pheno-source',invalidOrder:Number.isFinite(sourceTiming?.endAt)&&sourceTiming.endAt<receivedAt};
  if(durationMinutes===null)return{startAt:receivedAt,startText:parseReportTime(receivedAt).text,startSource:'本站收到推送的时间',endAt:null,endText:'类型待识别，暂不能计算',endSource:'等待识别头目或群集类型',basis:'receipt-policy',invalidOrder:false};
  const endAt=receivedAt+durationMinutes*60000;
  return{startAt:receivedAt,endAt,startText:parseReportTime(receivedAt).text,endText:parseReportTime(endAt).text,startSource:'本站收到推送的时间',endSource:`按${kind==='alpha'?'头目':'群集'}固定持续${durationMinutes}分钟计算`,basis:'receipt-policy',durationMinutes,invalidOrder:false};

@@ -8,3 +8,5 @@
 .report-countdown{font-weight:600;color:#9ae5ce;font-variant-numeric:tabular-nums}
 
 .report-card>.pokemon-art{width:100%;height:230px;background:#fff;border-radius:12px;margin-bottom:16px;display:flex;align-items:center;justify-content:center}.report-card>.pokemon-art img{width:220px;height:220px;object-fit:contain;image-rendering:pixelated}
+
+.report-kind.pheno,.report-card.pheno .report-pill{color:#d6b4ff}.report-card.pheno{border-color:#614978}

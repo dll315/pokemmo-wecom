@@ -20,7 +20,7 @@ for(const [key,value]of Object.entries(obj))fields[norm(key)]=value;
 for(const embed of body.embeds??[])for(const f of embed.fields??[])fields[norm(f.name)]=f.value;
 const pick=(...keys)=>{for(const key of keys){const v=obj[key]??fields[norm(key)];if(v!==undefined&&v!==null&&v!=='')return v;}return '';};
 const raw=[body.title,body.content,body.message,body.text,...(body.embeds??[]).flatMap(e=>[e.title,e.description,...(e.fields??[]).map(f=>`${f.name}: ${f.value}`)])].filter(v=>typeof v==='string'&&v.trim()).join('\n');
-const originalLink=raw.match(/https:\/\/alpha\.pokemmotools\.org\/(?:alpha|swarm)-list\?[^\s<>)]*/i)?.[0]||pick('url','source_url','sourceUrl','alphaUrl','swarmUrl','link','click')||(body.embeds??[]).find(e=>e.url)?.url||raw.match(/https:\/\/alpha\.pokemmotools\.org\/(?:alpha|swarm)-list\?[^\s<>)]*/i)?.[0];
+const originalLink=raw.match(/https:\/\/alpha\.pokemmotools\.org\/(?:alpha|swarm|pheno|phenomenon)-list\?[^\s<>)]*/i)?.[0]||pick('url','source_url','sourceUrl','alphaUrl','swarmUrl','link','click')||(body.embeds??[]).find(e=>e.url)?.url||raw.match(/https:\/\/alpha\.pokemmotools\.org\/(?:alpha|swarm|pheno|phenomenon)-list\?[^\s<>)]*/i)?.[0];
 // n8n Code 沙箱不保证提供 URL / URLSearchParams；只解析可信源站链接。
 const query=Object.create(null);
 const params={get:key=>query[key]??null};
@@ -48,7 +48,7 @@ function canonical(category,value){
 let pokemon=canonical('pokemon',pick('pokemon','pokemonName','Pokemon Name','species','Pokémon','宝可梦','宝可梦名称','精灵','精灵名称')||params.get('pokemon'));
 let region=canonical('region',pick('region','地区')||params.get('region'));
 const location=canonical('location',pick('location','位置','地点','具体位置')||params.get('location'));
-const kind=classifyPayload(pick,sourceLink,raw);
+const classification=classifyPayload(pick,sourceLink,raw,body._typeEvidence);const kind=classification.label;
 // Only infer an unambiguous name from the notification heading, never from move lists.
 const heading=[body.title,...(body.embeds??[]).map(e=>e.title),raw.split('\n')[0]].filter(Boolean).join(' ');
 function headingName(category){const found=new Set();for(const [en,zh] of Object.entries(DICTIONARIES[category]||{})){for(const name of [en,zh]){const escaped=Array.from(name,c=>/[a-z0-9\u4e00-\u9fff ]/i.test(c)?c:String.fromCharCode(92)+c).join('');if(new RegExp('(?<![A-Za-z])'+escaped+'(?![A-Za-z])','i').test(heading))found.add(en);}}return found.size===1?[...found][0]:'';}
@@ -63,15 +63,17 @@ function translated(v){let out=String(v);for(const cat of ['pokemon','region','l
 }return out;}
 function time(v){return parseReportTime(v).text;}
 
-if(!pokemon&&!raw)throw new Error('无法识别报点：请检查 Alphapedia Test 返回的消息结构');
-const title=`${region?tr('region',region):'地区待确认'} ${kind==='头目'?'头目':kind==='群集'?'群集':'类型待识别'} ${pokemon?tr('pokemon',pokemon):'名称待确认'}`;
+if(!pokemon&&!raw&&kind==='报点')throw new Error('无法识别报点：请检查 Alphapedia Test 返回的消息结构');
+const phenoName=clean(pick('phenoType','pheno_type','phenomenonType','phenomenon_type','奇遇类型'))||raw.split('\n')[0].match(/^(?:奇遇|现象|pheno(?:menon|mena)?)[\s:：]+(.+)$/i)?.[1]||'地点现象';
+const title=`${region?tr('region',region):'地区待确认'} ${kind==='头目'?'头目':kind==='群集'?'群集':kind==='奇遇'?'奇遇':'类型待识别'} ${pokemon?tr('pokemon',pokemon):kind==='奇遇'?phenoName:'名称待确认'}`;
 const matchingLink=[['pokemon',pokemon],['region',region],['location',location]].every(([key,value])=>params.get(key)&&canonical(key,params.get(key))===value);
-const sourceTiming=reportTiming(pick,{linkEnd:matchingLink&&/^https:\/\/alpha\.pokemmotools\.org\/(?:alpha|swarm)-list(?:\?|$)/i.test(sourceLink)?params.get('timestamp'):''});
-const timing=receiptPolicy(kind==='头目'?'alpha':kind==='群集'?'swarm':'unknown',receivedAt,sourceTiming);
+const sourceTiming=reportTiming(pick,{linkEnd:matchingLink&&/^https:\/\/alpha\.pokemmotools\.org\/(?:alpha|swarm|pheno|phenomenon)-list(?:\?|$)/i.test(sourceLink)?params.get('timestamp'):''});
+const timing=receiptPolicy(kind==='头目'?'alpha':kind==='群集'?'swarm':kind==='奇遇'?'pheno':'unknown',receivedAt,sourceTiming);
 const lines=[title,`**开始时间：** ${timing.startText}`,`**结束时间：** ${timing.endText}`,`**宝可梦：** ${tr('pokemon',pokemon)}`,`**地区：** ${tr('region',region)}`,`**位置：** ${tr('location',location)}`];
 const details=kind==='头目'?findAlphaDetails({pokemon,region,location},buildCatalog(SOURCE_CATALOG,translator)):null;
 const locationNotes=pick('locationNotes','location_notes','Location Notes','位置说明','地点说明','位置描述','具体地点说明');
 const probability=clean(pick('catchProbability','captureProbability','捕获概率','捕捉概率'));
+if(kind==='奇遇')lines.push('**奇遇说明：** '+translated(clean(pick('phenoType','phenomenonType','phenomenon_type','pheno_type','奇遇类型','说明','description')||locationNotes||raw.split('\n')[0]||'地点现象')));
 if(kind==='群集')lines.push('**位置说明：** '+(locationNotes?translated(clean(locationNotes)):tr('region',region)+' · '+tr('location',location)));
 if(probability&&/^(?:100|\d{1,2})(?:\.\d+)?%$/.test(probability)&&parseFloat(probability)<=100)lines.push('**来源提供的捕获概率：** '+probability);
 const catalog=DICTIONARIES.catalog?.[region]?.[location]||[];
@@ -98,6 +100,6 @@ const bytes=s=>Array.from(s).reduce((n,c)=>n+(c.codePointAt(0)>65535?4:c.codePoi
 let content=lines.join('\n');
 if(bytes(content+footer)>4000){const chars=Array.from(content);let size=bytes(content);while(chars.length&&size+bytes('\n…（内容过长已截断）'+footer)>4000)size-=bytes(chars.pop());content=chars.join('')+'\n…（内容过长已截断）';}
 const swarmInfo=kind==='群集'?{locationNotes:locationNotes?translated(clean(locationNotes)):tr('region',region)+' · '+tr('location',location),captureProbability:/^(?:100|\d{1,2})(?:\.\d+)?%$/.test(probability)&&parseFloat(probability)<=100?probability:null}:null;
-return {profile,swarmInfo,payload:{_sprite:profile.sprite,msgtype:'markdown',markdown:{content:content+footer}},title,timing,sourceTiming,reportedStatus:clean(pick('status','状态')),details,pokemon,region,location,kind:kind==='头目'?'alpha':kind==='群集'?'swarm':'unknown'};
+return {classification,profile,swarmInfo,payload:{_sprite:profile.sprite,msgtype:'markdown',markdown:{content:content+footer}},title,timing,sourceTiming,reportedStatus:clean(pick('status','状态')),details,pokemon,region,location,kind:classification.kind};
 
 }

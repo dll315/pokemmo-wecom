@@ -11,7 +11,7 @@ export class Monitor {
   }
   get delivering(){return this.inFlightTargets.size>0;}
   target(id='default'){return configuredTargets(this.store.state.config).find(t=>t.id===id);}
-  selected(event,target=this.target()){const c=this.store.state.config;if(event.source==='webhook')return c.enabled&&target?.enabled&&(event.notificationKind==='alpha'?c.alphas&&target.alphas:event.notificationKind==='swarm'?c.swarms&&target.swarms:false)&&(!c.regions.length||c.regions.includes(event.region));if(event.kind==='test')return !!target?.url;return c.enabled&&target?.enabled&&(event.kind==='alpha'?c.alphas&&target.alphas:c.swarms&&target.swarms)&&(!c.regions.length||c.regions.includes(event.region));}
+  selected(event,target=this.target()){const c=this.store.state.config;if(event.source==='webhook')return c.enabled&&target?.enabled&&(event.notificationKind==='alpha'?c.alphas&&target.alphas:event.notificationKind==='swarm'?c.swarms&&target.swarms:event.notificationKind==='pheno'?c.phenos!==false&&target.phenos!==false:false)&&(!c.regions.length||c.regions.includes(event.region));if(event.kind==='test')return !!target?.url;return c.enabled&&target?.enabled&&(event.kind==='alpha'?c.alphas&&target.alphas:c.swarms&&target.swarms)&&(!c.regions.length||c.regions.includes(event.region));}
   sent(record,id){return record?.sentTargets?.[id]?.fingerprint||(id==='default'?record?.lastSentFingerprint:null);}
   discarded(record,id){return record?.discardedTargets?.[id]||(id==='default'?record?.lastDiscardedFingerprint:null);}
   readyAt(id){return Math.max(this.store.state.targetNextAt?.[channelRateKey(this.target(id))]||0,this.store.state.targetNextAt?.[id]||(id==='default'?this.store.state.nextSendAt:0));}

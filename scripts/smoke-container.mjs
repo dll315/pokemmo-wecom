@@ -29,6 +29,7 @@ try{
   const swarm=(await api(subscription.path,{kind:'swarm',pokemon:'Pikachu',region:'Kanto',location:'Route 1'})).data;assert.equal(swarm.queued,1);
   const incoming=(await api('/api/inbox',undefined,auth.cookie)).data.receipts[0];assert.equal(incoming.timing.endAt-incoming.at,15*60000);
   assert.equal((await api('/api/subscriptions',{id:subscription.id,enabled:false},auth.cookie)).data.enabled,false);
+  const pheno=(await api(inbox.path,{type:'message',event_type:'pheno',region:'Unova',location:'Route 5',endAt:new Date(Date.now()+600000).toISOString()})).data;assert.equal(pheno.queued,1);const phenoReceipt=(await api('/api/inbox',undefined,auth.cookie)).data.receipts[0];assert.equal(phenoReceipt.kind,'pheno');assert.equal(phenoReceipt.timing.startAt,phenoReceipt.at);assert.equal(phenoReceipt.classification.reason,'源站明确类型字段');
   // Never enable sending or call the test-message API in this smoke check.
   docker(['run','-d','--name',other,'-v',volume+':/data',image]);await pause(2000);
   assert.equal(docker(['inspect','--format','{{.State.Status}}',other]),'exited','same data volume must be locked');
@@ -37,7 +38,7 @@ try{
   docker(['rm','-f',name]);start();await ready();auth=await api('/api/login',{password:'123456'});
   const state=(await api('/api/state',undefined,auth.cookie)).data;
   assert.ok(state.config.targets.some(t=>t.id===target.id));assert.equal(state.config.enabled,false);
-  const restoredInbox=(await api('/api/inbox',undefined,auth.cookie)).data;assert.equal(restoredInbox.path,inbox.path);assert.equal(restoredInbox.receipts.length,2);assert.equal(restoredInbox.subscriptions.find(s=>s.id===subscription.id).enabled,false);assert.equal(state.config.targets.find(t=>t.id===qq.id).type,'qmsg');assert.equal(restoredInbox.receipts[1].timing.startAt,received.at);
+  const restoredInbox=(await api('/api/inbox',undefined,auth.cookie)).data;assert.equal(restoredInbox.path,inbox.path);assert.equal(restoredInbox.receipts.length,3);assert.equal(restoredInbox.subscriptions.find(s=>s.id===subscription.id).enabled,false);assert.equal(state.config.targets.find(t=>t.id===qq.id).type,'qmsg');assert.equal(restoredInbox.receipts.find(r=>r.kind==='alpha').timing.startAt,received.at);
   await api('/api/targets/delete',{id:target.id},auth.cookie);
   console.log('Container verified: startup, public page, backend auth, target API, writable /data, cross-container lock, crash/recreate persistence.');
 }catch(e){try{console.error(docker(['logs','--tail','80',name]));}catch{}throw e;}
