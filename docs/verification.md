@@ -1,5 +1,16 @@
 # 交付验证记录
 
+## 2026-11-06：v1.8.1 服务器真实回调复现（本节优先）
+
+- 已授权读取用户实际后台最近30条原始回调，未修改服务器配置或向真实群发送消息。根因为topic完整值alphapings/swarmpings未匹配，originalJson/shareUrl未读取且实际链接为HTTP；v1.8.0因此全部落入unknown。
+- 真实30条记录（1头目、29群集）本地重放及原接收时刻迁移全部通过，新增公开测试样本已移除发布者与群信息。此次没有真实奇遇记录，不声称已完成其真实回调验证。
+- 读取originalJson.data中的头目特性、配招、警告备注，群集Cheapest/Fastest捕获方案保留球种/HP/状态/概率条件；0级Tier正确保留。134项应用测试通过。
+- Edge电脑/手机导航、奇遇栏目、精灵/地图解码与后台表单检查通过。
+- Linux实际镜像、资料保留、部署更新回滚及独立镜像更新通过：https://github.com/dll315/pokemmo-wecom/actions/runs/42156767878
+- 正式公开下载和真实更新命令通过：https://github.com/dll315/pokemmo-wecom/actions/runs/42156929956 。发布：https://github.com/dll315/pokemmo-wecom/releases/tag/v1.8.1
+- 最后检查用户服务器仍显示v1.8.0，需要用户在服务器执行更新；未宣称已远程部署。历史记录重新整理，不自动重新发群。
+
+
 ## 2026-11-06：v1.8.0 三类事件全流程（本节优先）
 
 - 根因复现：pick只取第一个非空字段，通用type=message遮盖event_type=alpha_spawn；原处理链仅支持两类，没有完整接入Pheno。现保留各层原始类型证据逐项判断，支持头目/群集/奇遇，冲突停止猜测并保留原因。
