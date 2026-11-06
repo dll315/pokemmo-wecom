@@ -7,4 +7,4 @@ test('头目从收到推送时刻起算75分钟，跨天仍准确，不使用上
 test('群集从收到推送起算15分钟，即使上游未提供时间也有结束时间',()=>{
  const r=formatIncoming({kind:'swarm',pokemon:'Pikachu',region:'Kanto'},tr,{receivedAt});assert.equal(r.timing.startAt,receivedAt);assert.equal(r.timing.endAt,receivedAt+15*60000);assert.equal(r.timing.basis,'receipt-policy');assert.match(r.payload.markdown.content,/结束时间/);
 });
-test('未知通知不套用头目或群集的固定时长',()=>{const r=formatIncoming({content:'未知通知'},tr,{receivedAt});assert.equal(r.timing.durationMinutes,undefined);assert.equal(r.timing.endAt,null);});
+test('未知通知不套用头目或群集的固定时长',()=>{const r=formatIncoming({content:'未知通知'},tr,{receivedAt});assert.equal(r.timing.durationMinutes,undefined);assert.equal(r.timing.startAt,receivedAt);assert.equal(r.timing.endAt,null);assert.doesNotMatch(r.payload.markdown.content,/开始时间：.*源站未提供/);});

@@ -1,3 +1,4 @@
+import {normalizePayload,classifyPayload} from './payload.mjs';
 import {readFileSync} from 'node:fs';
 import {buildCatalog} from './public.mjs';
 import {findAlphaDetails} from './wecom.mjs';
@@ -7,7 +8,7 @@ export function formatIncoming(input,translator,{receivedAt=Date.now()}={}){
 const DICTIONARIES={...translator.maps,catalog:SOURCE_CATALOG};
 // DICTIONARIES 在生成工作流时内嵌，不需要联网翻译或 AI API。
 const incoming={body:input};
-let body=incoming.body??incoming;
+let body=normalizePayload(incoming.body??incoming);
 if(typeof body==='string'){try{body=JSON.parse(body);}catch{body={content:body};}}
 if(!body||typeof body!=='object'||Array.isArray(body))throw new Error('无法识别报点：需要 JSON 对象或文本');
 const obj=body.data&&typeof body.data==='object'?{...body,...body.data}:body;
@@ -18,7 +19,7 @@ for(const [key,value]of Object.entries(obj))fields[norm(key)]=value;
 for(const embed of body.embeds??[])for(const f of embed.fields??[])fields[norm(f.name)]=f.value;
 const pick=(...keys)=>{for(const key of keys){const v=obj[key]??fields[norm(key)];if(v!==undefined&&v!==null&&v!=='')return v;}return '';};
 const raw=[body.title,body.content,body.message,body.text,...(body.embeds??[]).flatMap(e=>[e.title,e.description,...(e.fields??[]).map(f=>`${f.name}: ${f.value}`)])].filter(v=>typeof v==='string'&&v.trim()).join('\n');
-const originalLink=pick('url','alphaUrl','swarmUrl','link')||(body.embeds??[]).find(e=>e.url)?.url||raw.match(/https:\/\/alpha\.pokemmotools\.org\/(?:alpha|swarm)-list\?[^\s<>)]*/i)?.[0];
+const originalLink=raw.match(/https:\/\/alpha\.pokemmotools\.org\/(?:alpha|swarm)-list\?[^\s<>)]*/i)?.[0]||pick('url','source_url','sourceUrl','alphaUrl','swarmUrl','link','click')||(body.embeds??[]).find(e=>e.url)?.url||raw.match(/https:\/\/alpha\.pokemmotools\.org\/(?:alpha|swarm)-list\?[^\s<>)]*/i)?.[0];
 // n8n Code 沙箱不保证提供 URL / URLSearchParams；只解析可信源站链接。
 const query=Object.create(null);
 const params={get:key=>query[key]??null};
@@ -46,9 +47,7 @@ function canonical(category,value){
 let pokemon=canonical('pokemon',pick('pokemon','pokemonName','Pokemon Name','species','Pokémon','宝可梦','宝可梦名称','精灵','精灵名称')||params.get('pokemon'));
 let region=canonical('region',pick('region','地区')||params.get('region'));
 const location=canonical('location',pick('location','位置','地点','具体位置')||params.get('location'));
-const explicit=clean(pick('kind','type','eventType'));
-const hint=raw.replace(/https?:\/\/\S+/gi,'')+' '+sourceLink.replace(/^https:\/\/alpha\.pokemmotools\.org/i,'').replace(/swarm-list/g,'swarm').replace(/alpha-list/g,'alpha');
-const kind=/^(?:alpha|头目)$/i.test(explicit)?'头目':/^(?:swarms?|群集|集群|群聚|明雷|大量出现)$/i.test(explicit)?'群集':/\balpha\b|头目/i.test(hint)?'头目':/\bswarms?\b|群集|集群|群聚|明雷|大量出现/i.test(hint)?'群集':'报点';
+const kind=classifyPayload(pick,sourceLink,raw);
 // Only infer an unambiguous name from the notification heading, never from move lists.
 const heading=[body.title,...(body.embeds??[]).map(e=>e.title),raw.split('\n')[0]].filter(Boolean).join(' ');
 function headingName(category){const found=new Set();for(const [en,zh] of Object.entries(DICTIONARIES[category]||{})){for(const name of [en,zh]){const escaped=Array.from(name,c=>/[a-z0-9\u4e00-\u9fff ]/i.test(c)?c:String.fromCharCode(92)+c).join('');if(new RegExp('(?<![A-Za-z])'+escaped+'(?![A-Za-z])','i').test(heading))found.add(en);}}return found.size===1?[...found][0]:'';}
@@ -64,7 +63,7 @@ function translated(v){let out=String(v);for(const cat of ['pokemon','region','l
 function time(v){return parseReportTime(v).text;}
 
 if(!pokemon&&!raw)throw new Error('无法识别报点：请检查 Alphapedia Test 返回的消息结构');
-const title=`${region?tr('region',region):'地区待确认'} ${kind==='头目'?'头目':kind==='群集'?'群集':'通知'} ${pokemon?tr('pokemon',pokemon):'名称待确认'}`;
+const title=`${region?tr('region',region):'地区待确认'} ${kind==='头目'?'头目':kind==='群集'?'群集':'类型待识别'} ${pokemon?tr('pokemon',pokemon):'名称待确认'}`;
 const matchingLink=[['pokemon',pokemon],['region',region],['location',location]].every(([key,value])=>params.get(key)&&canonical(key,params.get(key))===value);
 const sourceTiming=reportTiming(pick,{linkEnd:matchingLink&&/^https:\/\/alpha\.pokemmotools\.org\/(?:alpha|swarm)-list(?:\?|$)/i.test(sourceLink)?params.get('timestamp'):''});
 const timing=receiptPolicy(kind==='头目'?'alpha':kind==='群集'?'swarm':'unknown',receivedAt,sourceTiming);
@@ -85,7 +84,7 @@ if(detail&&kind==='头目'){
 if(pick('status','状态'))lines.push(`**来源状态：** ${translated(clean(pick('status','状态')))}`);
 // 原文先限长，避免超长输入引起词表替换开销；只对显示文本做翻译。
 if(kind==='报点'&&raw)lines.push('**原始通知：**',translated(clean(raw).slice(0,5000)));
-const footer=`\n[查看来源](${sourceLink})`;
+const footer=sourceLink==='https://alpha.pokemmotools.org/'?'':`\n[查看来源](${sourceLink})`;
 const bytes=s=>Array.from(s).reduce((n,c)=>n+(c.codePointAt(0)>65535?4:c.codePointAt(0)>2047?3:c.codePointAt(0)>127?2:1),0);
 let content=lines.join('\n');
 if(bytes(content+footer)>4000){const chars=Array.from(content);let size=bytes(content);while(chars.length&&size+bytes('\n…（内容过长已截断）'+footer)>4000)size-=bytes(chars.pop());content=chars.join('')+'\n…（内容过长已截断）';}

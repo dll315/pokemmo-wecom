@@ -26,8 +26,8 @@ test('接收地址重启后不变、接收记录保存、不在公开接口泄�
 }));
 test('未知消息保留中文原文；空对象拒绝，地区过滤和目标开关生效',()=>fixture(async({store,inbox,monitor,sent})=>{
  assert.throws(()=>inbox.receive({}),/无法识别/);
- inbox.receive({content:'这是一条不含固定字段的通知'});await monitor.deliverOne();assert.match(sent[0].markdown.content,/这是一条/);
- store.state.config.regions=['Kanto'];inbox.receive({kind:'alpha',pokemon:'Jynx',region:'Unova',content:'另一次'});assert.equal(store.state.outbox.length,1);
+ inbox.receive({content:'这是一条不含固定字段的通知'});await monitor.deliverOne();assert.equal(sent.length,0);assert.match(store.state.receipts[0].preview,/这是一条/);
+ store.state.config.regions=['Kanto'];inbox.receive({kind:'alpha',pokemon:'Jynx',region:'Unova',content:'另一次'});assert.equal(store.state.outbox.length,0);
 }));
 test('后台常驻工作线程无需手动点击即可发送回调，启动时不访问源站',()=>fixture(async({inbox,monitor,sent})=>{
  monitor.start({webhookOnly:true});try{inbox.receive({content:'Alpha Jynx 自动发送测试'});const end=Date.now()+4000;while(!sent.length&&Date.now()<end)await new Promise(r=>setTimeout(r,50));assert.equal(sent.length,1);}finally{await monitor.stop();}
