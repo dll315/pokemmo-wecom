@@ -1,5 +1,15 @@
 # 交付验证记录
 
+## 2026-11-06：v1.7.1 截图字段与精灵图片（本节优先）
+
+- 按用户两张Telegram截图文字重建photo/caption样本；毒刺水母头目和钳尾蝎群集识别、地区地点、性别比例、蛋组、特性、配招、Tier解析/翻译与75/15分钟计时通过。截图不等于取得真实源站JSON，尚未实际向用户群发送。
+- 122项测试通过。新增真实本地HTTP图片base64/MD5与文字分条发送、图片成功后文字重试不重复图片、群集不借用头目Tier检查。媒体成功状态随任务持久化。源站明确特性/配招在网页和消息中优先，缺失头目资料才按准确地点补充。
+- 670张PokeAPI标准正面精灵PNG随镜像提供，清单见data/sprite-manifest.json，原图权利保留。不宣称为源站同一图片或动画。
+- Edge桌面/手机栏目、图片解码、来源配招覆盖词表、后台订阅/QQ表单及截图两张卡片样例检查通过，无脚本错误与横向溢出。企业微信采用图片＋完整文字分条，QQ普通渠道仍仅文字。
+- Linux实际容器及精灵图路由、资料重启保留、部署更新/回滚和独立镜像更新通过：https://github.com/dll315/pokemmo-wecom/actions/runs/42150943147
+- 正式公开下载与真实更新命令通过：https://github.com/dll315/pokemmo-wecom/actions/runs/42151250687 。发布：https://github.com/dll315/pokemmo-wecom/releases/tag/v1.7.1
+
+
 ## 2026-11-06：v1.6.3 接收时间与类型证据（本节优先）
 
 - 根因复现：unknown类型的receiptPolicy返回源站时间；中文群怪、notification_type、嵌套事件、markdown正文、source_url未参与原解析；同时出现Alpha/Swarm时原逻辑优先Alpha。
