@@ -13,11 +13,12 @@ function timings(r,box){
  const t=r.timing||{};const grid=element('dl',undefined,'report-times');
  for(const [name,value]of [['开始时间',t.startText||'源站未提供'],['结束时间',t.endText||'源站未提供']]){const row=element('div');row.append(element('dt',name),element('dd',value));grid.append(row);}
  if(t.basis==='receipt-policy'&&t.endAt>Date.now())box.append(element('p','剩余约 '+Math.ceil((t.endAt-Date.now())/60000)+' 分钟 · 共 '+t.durationMinutes+' 分钟','report-countdown'));
+ if(r.halloweenMethod)box.append(element('p','万圣节捕捉方法：'+r.halloweenMethod,'report-countdown'));
  box.append(grid,element('p',(t.startSource||'源站未提供')+'；'+(t.endSource||'源站未提供'),'note'),element('p','接收时间：'+date(r.receivedAt)+'（北京时间）','note'));
 }
 function reportDetail(r){
  if(r.details){const d=r.details;detail({...d,abilityZh:r.profile?.abilityZh||d.abilityZh,movesZh:r.profile?.movesZh?.length?r.profile.movesZh:d.movesZh});byId('detail-title').textContent=r.title;const timingBox=element('section');timings(r,timingBox);byId('detail-content').prepend(timingBox);}
- else{byId('detail-title').textContent=r.title;const box=byId('detail-content');box.replaceChildren();timings(r,box);if(r.profile?.sprite)box.append(art({sprite:r.profile.sprite,pokemonZh:r.pokemonZh}));for(const plan of r.profile?.capturePlans||[])box.append(element('p','捕获概率（'+plan.strategy+'）：'+plan.ball+' '+plan.chance+'；HP '+plan.hp+'；状态：'+plan.status));box.append(element('p',r.regionZh+' · '+r.locationZh),element('p',r.kind==='swarm'?'群集资料按本条来源展示。':'暂无准确匹配的资料，请到管理后台查看原始通知。','note'));byId('catalog-detail').showModal();}
+ else{byId('detail-title').textContent=r.title;const box=byId('detail-content');box.replaceChildren();timings(r,box);if(r.profile?.sprite)box.append(art({sprite:r.profile.sprite,pokemonZh:r.pokemonZh}));for(const plan of (r.halloweenMethod?[]:(r.profile?.capturePlans||[])))box.append(element('p','捕获概率（'+plan.strategy+'）：'+plan.ball+' '+plan.chance+'；HP '+plan.hp+'；状态：'+plan.status));box.append(element('p',r.regionZh+' · '+r.locationZh),element('p',r.kind==='swarm'?'群集资料按本条来源展示。':'暂无准确匹配的资料，请到管理后台查看原始通知。','note'));byId('catalog-detail').showModal();}
 }
 function reportCard(r){
  const card=element('article',undefined,'card report-card '+r.kind);const top=element('div',undefined,'report-card-heading');top.append(element('h3',r.title),element('span',r.kind==='alpha'?'头目':r.kind==='swarm'?'群集':r.kind==='pheno'?'奇遇':'类型待识别','report-kind '+r.kind));

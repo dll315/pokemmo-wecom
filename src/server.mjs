@@ -14,7 +14,7 @@ async function readJson(req){
 }
 function configuration(previous,body){
   let next={...previous};
-  for(const key of ['enabled','alphas','swarms','phenos','sendImages'])if(key in body){if(typeof body[key]!=='boolean')throw new Error('推送开关必须为布尔值');next[key]=body[key];}
+  for(const key of ['enabled','alphas','swarms','phenos','sendImages','halloweenMode'])if(key in body){if(typeof body[key]!=='boolean')throw new Error('推送开关必须为布尔值');next[key]=body[key];}
   if('webhookUrl'in body){if(typeof body.webhookUrl!=='string')throw new Error('机器人地址无效');if(body.webhookUrl.trim())next=setLegacyWebhook(next,body.webhookUrl.trim());}
   if(body.clearWebhook===true){const legacyUrl=next.webhookUrl;next.webhookUrl='';next.targets=(next.targets||[]).filter(t=>t.id!=='default'&&t.url!==legacyUrl);next.enabled=false;}
   for(const [key,min,max]of [['pollSeconds',15,3600],['minRemainingSeconds',0,300]])if(key in body){if(!Number.isInteger(body[key])||body[key]<min||body[key]>max)throw new Error(key==='pollSeconds'?'检查间隔须为15至3600秒':'最低剩余时间须为0至300秒');next[key]=body[key];}

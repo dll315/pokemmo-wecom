@@ -1,3 +1,4 @@
+import {applyHalloween} from './halloween.mjs';
 import {receiptPolicy} from './report-time.mjs';
 import {randomBytes,createHash} from 'node:crypto';
 import {configuredTargets} from './targets.mjs';
@@ -37,5 +38,5 @@ export class WebhookInbox{
   this.store.prune(now);this.store.log('info',`已接收官网通知：${this.translator.pokemon(msg.pokemon)||'原文通知'}，${receipt.queued}个推送目标`);this.store.save();
   return{ok:true,queued:receipt.queued};
  }
- view(){return{mode:'webhook',path:this.path,subscriptions:this.store.state.subscriptions.map(subscriptionView),receipts:this.store.state.receipts.slice(0,30)};}
+ view(){return{mode:'webhook',path:this.path,subscriptions:this.store.state.subscriptions.map(subscriptionView),receipts:this.store.state.receipts.slice(0,30).map(r=>({...r,preview:applyHalloween({msgtype:'markdown',markdown:{content:r.preview}},{enabled:this.store.state.config.halloweenMode===true,pokemon:r.pokemon,kind:r.kind}).markdown.content}))};}
 }
