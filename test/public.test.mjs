@@ -25,7 +25,7 @@ test('24小时访客记录按时间排列并排除更旧记录，不影响发送
 });
 test('头目资料提供中文特性、招式、通行条件与合法图片地址',()=>{
   const catalog=buildCatalog({Unova:{'Route 8':[{name:'Jynx',data:{Ability:'Dry Skin',Moveset:['Psychic'],HMs:['Surf'],Notes:[], 'Egg Group':['Humanoid'], 'Male Ratio':'0'}}]}},tr,{Jynx:124});
-  assert.equal(catalog[0].abilityZh,'干燥皮肤');assert.deepEqual(catalog[0].movesZh,['精神强念']);assert.deepEqual(catalog[0].hmsZh,['冲浪']);assert.equal(catalog[0].sprite,'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/124.png');
+  assert.equal(catalog[0].abilityZh,'干燥皮肤');assert.deepEqual(catalog[0].movesZh,['精神强念']);assert.deepEqual(catalog[0].hmsZh,['冲浪']);assert.equal(catalog[0].sprite,'/sprites/124.png');
 });
 test('北京时间跨午夜时选择正确的20点时间窗，时间窗不代表确定刷新',()=>{
   const result=timeSlots(Date.parse('2026-10-12T16:30:00Z'));assert.equal(result.slots.filter(s=>s.current).length,1);assert.equal(result.slots.find(s=>s.current).label,'20:00—次日00:45');assert.equal(result.nextStart,Date.parse('2026-10-12T18:00:00Z'));

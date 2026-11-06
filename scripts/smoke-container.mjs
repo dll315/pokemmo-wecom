@@ -22,7 +22,7 @@ try{
   assert.equal((await api('/api/inbox',undefined,auth.cookie)).data.receipts.length,1);
   const received=(await api('/api/inbox',undefined,auth.cookie)).data.receipts[0];assert.match(received.preview,/铁尾/);assert.match(received.preview,/闪光/);assert.ok(received.preview.includes(base+received.details.mapPath));const map=await fetch(base+received.details.mapPath);assert.equal(map.status,200);assert.match(map.headers.get('content-type'),/^image\//);
   assert.equal(received.preview.split('\n')[0],'丰缘 头目 可多拉');assert.ok(received.timing.startAt);assert.ok(received.timing.endAt);assert.equal((await fetch(base+'/reports.js')).status,200);
-  assert.equal(received.timing.startAt,received.at);assert.equal(received.timing.endAt-received.at,75*60000);
+  assert.ok(received.profile.sprite);assert.equal((await fetch(base+received.profile.sprite)).status,200);assert.ok(received.profile.movesZh.length);assert.equal(received.timing.startAt,received.at);assert.equal(received.timing.endAt-received.at,75*60000);
   const subscription=(await api('/api/subscriptions',{name:'容器订阅',alphas:false,swarms:true},auth.cookie)).data;
   const qq=(await api('/api/targets',{name:'QQ配置保存检查',type:'qmsg',url:'https://qmsg.zendee.cn/v3/send/container-mock-key',groupId:'123456',enabled:false},auth.cookie)).data;
   assert.equal(qq.type,'qmsg');assert.equal(qq.groupId,'123456');

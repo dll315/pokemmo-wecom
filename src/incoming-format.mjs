@@ -1,3 +1,4 @@
+import {eventProfile} from './profile.mjs';
 import {normalizePayload,classifyPayload} from './payload.mjs';
 import {readFileSync} from 'node:fs';
 import {buildCatalog} from './public.mjs';
@@ -75,8 +76,16 @@ if(kind==='群集')lines.push('**位置说明：** '+(locationNotes?translated(c
 if(probability&&/^(?:100|\d{1,2})(?:\.\d+)?%$/.test(probability)&&parseFloat(probability)<=100)lines.push('**来源提供的捕获概率：** '+probability);
 const catalog=DICTIONARIES.catalog?.[region]?.[location]||[];
 const detail=catalog.find(row=>norm(row.name)===norm(pokemon))?.data;
+const profile=eventProfile(pick,detail,translator,pokemon);
+if(kind==='头目'){
+ if(profile.maleRatio!==null)lines.push('**雄性比例：** '+profile.maleRatio+'%');
+ if(profile.eggGroups.length)lines.push('**蛋组：** '+profile.eggGroups.join('、'));
+ if(profile.abilityZh)lines.push('**特性：** '+profile.abilityZh);
+ if(profile.movesZh.length)lines.push('**配招／招式：** '+profile.movesZh.join('、'));
+}
+if(profile.tier!==null)lines.push('**闪光等级（Tier）：** '+profile.tier);
 if(detail&&kind==='头目'){
-  lines.push(`**具体地点：** ${details.specificLocationZh}`,`**特性：** ${details.abilityZh}`,`**招式：** ${details.movesZh.join('、')||'未提供'}`,`**通行技能（秘传／HM）：** ${details.hmsKnown?(details.hmsZh.join('、')||'源站未列出额外通行技能'):'暂无资料'}`);
+  lines.push(`**具体地点：** ${details.specificLocationZh}`,`**通行技能（秘传／HM）：** ${details.hmsKnown?(details.hmsZh.join('、')||'源站未列出额外通行技能'):'暂无资料'}`);
   if(details.mapSourceUrl)lines.push(`[查看位置地图](${details.mapSourceUrl})`);else lines.push('**位置地图：** 源站暂无此地点的图片。');
   if(detail['Location Notes'])lines.push(`**前往条件：** ${tr('notes',detail['Location Notes'])}`);
   if(detail.Notes?.length)lines.push(`**捕捉备注：** ${detail.Notes.map(v=>tr('notes',v)).join('；')}`);
@@ -89,6 +98,6 @@ const bytes=s=>Array.from(s).reduce((n,c)=>n+(c.codePointAt(0)>65535?4:c.codePoi
 let content=lines.join('\n');
 if(bytes(content+footer)>4000){const chars=Array.from(content);let size=bytes(content);while(chars.length&&size+bytes('\n…（内容过长已截断）'+footer)>4000)size-=bytes(chars.pop());content=chars.join('')+'\n…（内容过长已截断）';}
 const swarmInfo=kind==='群集'?{locationNotes:locationNotes?translated(clean(locationNotes)):tr('region',region)+' · '+tr('location',location),captureProbability:/^(?:100|\d{1,2})(?:\.\d+)?%$/.test(probability)&&parseFloat(probability)<=100?probability:null}:null;
-return {swarmInfo,payload:{msgtype:'markdown',markdown:{content:content+footer}},title,timing,sourceTiming,reportedStatus:clean(pick('status','状态')),details,pokemon,region,location,kind:kind==='头目'?'alpha':kind==='群集'?'swarm':'unknown'};
+return {profile,swarmInfo,payload:{_sprite:profile.sprite,msgtype:'markdown',markdown:{content:content+footer}},title,timing,sourceTiming,reportedStatus:clean(pick('status','状态')),details,pokemon,region,location,kind:kind==='头目'?'alpha':kind==='群集'?'swarm':'unknown'};
 
 }

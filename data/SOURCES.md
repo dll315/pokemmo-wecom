@@ -19,3 +19,5 @@
 - pokemon-natdex.json：https://alpha.pokemmotools.org/api/pokemon-natdex-map
 
 上述文件用于宝可梦、地区和地点名称翻译，来源为 Alphapedia 的公开简体中文词表；未知名称保留英文。没有猜译缺失条目。可在持久化数据目录添加 translations.json，以 pokemon、region、location 三个对象提供经用户核实的覆盖翻译。
+
+精灵图片于2026-11-06从PokeAPI/sprites公开仓库获取，共670张与随包全国图鉴编号对应的标准正面PNG，保存在web/sprites，SHA256见sprite-manifest.json。不冒充源站原图或动态图，不推断未知形态。原始游戏角色/图像版权属于原权利人，不纳入本项目源码MIT授权。来源：https://github.com/PokeAPI/sprites 。
