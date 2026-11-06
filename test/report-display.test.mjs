@@ -28,7 +28,7 @@ test('非法日历日期不能自动滚动成另一天',()=>{
  const r=formatIncoming({kind:'alpha',pokemon:'Jynx',region:'Unova',startAt:'2026-02-30T10:00:00Z'},tr);assert.equal(r.sourceTiming.startAt,null);assert.match(r.sourceTiming.startText,/无效/);
 });
 test('整理旧记录时接收时间保持原值，不变成升级或预览时刻',()=>{
- const r=formatIncoming({kind:'alpha',pokemon:'Jynx',region:'Unova'},tr,{receivedAt:Date.parse('2026-11-04T00:00:00Z')});assert.match(r.payload.markdown.content,/开始时间：.*2026\/11\/4 08:00:00/);
+ const r=formatIncoming({kind:'alpha',pokemon:'Jynx',region:'Unova'},tr,{receivedAt:Date.parse('2026-11-04T00:00:00Z')});assert.equal(r.timing.startAt,Date.parse('2026-11-04T00:00:00Z'));assert.match(r.payload.markdown.content,/开始时间：.*08:00/);assert.doesNotMatch(r.payload.markdown.content,/2026|北京时间|08:00:00/);
 });
 test('只有刷新时间时不将它误写为源站报点时间',()=>{
  const r=formatIncoming({kind:'alpha',pokemon:'Jynx',region:'Unova',spawnedAt:'2026-11-05T10:00:00Z'},tr);assert.equal(r.sourceTiming.startAt,1793872800000);assert.doesNotMatch(r.payload.markdown.content,/报点时间：/);

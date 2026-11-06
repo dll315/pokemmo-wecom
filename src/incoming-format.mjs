@@ -1,3 +1,4 @@
+import {formatPush} from './presentation.mjs';
 import {eventProfile} from './profile.mjs';
 import {normalizePayload,classifyPayload} from './payload.mjs';
 import {readFileSync} from 'node:fs';
@@ -102,6 +103,6 @@ const bytes=s=>Array.from(s).reduce((n,c)=>n+(c.codePointAt(0)>65535?4:c.codePoi
 let content=lines.join('\n');
 if(bytes(content+footer)>4000){const chars=Array.from(content);let size=bytes(content);while(chars.length&&size+bytes('\n…（内容过长已截断）'+footer)>4000)size-=bytes(chars.pop());content=chars.join('')+'\n…（内容过长已截断）';}
 const swarmInfo=kind==='群集'?{locationNotes:locationNotes?translated(clean(locationNotes)):tr('region',region)+' · '+tr('location',location),captureProbability:/^(?:100|\d{1,2})(?:\.\d+)?%$/.test(probability)&&parseFloat(probability)<=100?probability:null}:null;
-return {classification,profile,swarmInfo,payload:{_sprite:profile.sprite,msgtype:'markdown',markdown:{content:content+footer}},title,timing,sourceTiming,reportedStatus:clean(pick('status','状态')),details,pokemon,region,location,kind:classification.kind};
+return {classification,profile,swarmInfo,payload:formatPush({_sprite:profile.sprite,msgtype:'markdown',markdown:{content:content+footer}},timing),title,timing,sourceTiming,reportedStatus:clean(pick('status','状态')),details,pokemon,region,location,kind:classification.kind};
 
 }
