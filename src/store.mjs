@@ -6,13 +6,13 @@ import { validateWebhook } from './wecom.mjs';
 import { configuredTargets, targetView } from './targets.mjs';
 import {validateChannelTarget} from './channels.mjs';
 
-export const defaults={enabled:false,webhookUrl:'',targets:[],alphas:true,swarms:true,phenos:true,pollSeconds:30,minRemainingSeconds:20,regions:[]};
+export const defaults={enabled:false,webhookUrl:'',targets:[],alphas:true,swarms:true,phenos:true,sendImages:false,pollSeconds:30,minRemainingSeconds:20,regions:[]};
 function newState(){return{version:1,config:{...defaults,regions:[],targets:[]},records:{},outbox:[],sources:{alpha:{},swarm:{}},logs:[],nextSendAt:0,targetNextAt:{}};}
 function object(value){return value&&typeof value==='object'&&!Array.isArray(value);}
 function validEvent(e){return object(e)&&typeof e.key==='string'&&['alpha','swarm','test'].includes(e.kind)&&typeof e.pokemon==='string'&&typeof e.region==='string'&&typeof e.location==='string'&&Number.isFinite(e.reportedAt)&&Number.isFinite(e.expiresAt)&&typeof e.verified==='boolean'&&['active','expired','removed','ended_early'].includes(e.status);}
 function validState(s){
   if(!object(s)||s.version!==1||!object(s.config)||!object(s.records)||!Array.isArray(s.outbox)||!object(s.sources?.alpha)||!object(s.sources?.swarm)||!Array.isArray(s.logs)||!Number.isFinite(s.nextSendAt)||s.nextSendAt<0)return false;
-  const c=s.config;if(c.phenos!==undefined&&typeof c.phenos!=='boolean')return false;
+  const c=s.config;if(c.sendImages!==undefined&&typeof c.sendImages!=='boolean')return false;if(c.phenos!==undefined&&typeof c.phenos!=='boolean')return false;
   if(s.subscriptions!==undefined){if(!Array.isArray(s.subscriptions)||s.subscriptions.length>20)return false;const ids=new Set(),tokens=new Set();for(const t of s.subscriptions){if(!object(t)||typeof t.id!=='string'||!t.id||typeof t.name!=='string'||!t.name||typeof t.token!=='string'||!/^([a-f0-9]{48})$/.test(t.token)||!['enabled','alphas','swarms'].every(k=>typeof t[k]==='boolean')||ids.has(t.id)||tokens.has(t.token))return false;ids.add(t.id);tokens.add(t.token);}}
   if(!['enabled','alphas','swarms'].every(k=>typeof c[k]==='boolean')||typeof c.webhookUrl!=='string'||!Number.isInteger(c.pollSeconds)||c.pollSeconds<15||c.pollSeconds>3600||!Number.isInteger(c.minRemainingSeconds)||c.minRemainingSeconds<0||c.minRemainingSeconds>300||!Array.isArray(c.regions)||c.regions.some(r=>!['Kanto','Johto','Hoenn','Sinnoh','Unova'].includes(r)))return false;
   try{if(c.webhookUrl)validateWebhook(c.webhookUrl);}catch{return false;}

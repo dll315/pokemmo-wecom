@@ -64,3 +64,5 @@ test('旧配置接口拒绝重复目标时，不能污染配置或导致后续�
   await fetch(base+'/api/targets',{method:'POST',headers,body:JSON.stringify({name:'已有群',url:address})});
   const response=await fetch(base+'/api/config',{method:'POST',headers,body:JSON.stringify({webhookUrl:address})});assert.equal(response.status,400);assert.equal(store.state.config.targets.length,1);assert.doesNotThrow(()=>store.save());
 }));
+
+test('图片开关默认关闭，API严格校验且重启后保留',async()=>application(async(base,store)=>{assert.equal(store.state.config.sendImages,false);const cookie=await login(base);const post=value=>fetch(base+'/api/config',{method:'POST',headers:{'Content-Type':'application/json',Origin:base,cookie},body:JSON.stringify({sendImages:value})});assert.equal((await post(true)).status,200);assert.equal((await post('true')).status,400);assert.equal(store.state.config.sendImages,true);store.close();const reopened=new Store(store.directory);try{assert.equal(reopened.state.config.sendImages,true);}finally{reopened.close();}}));

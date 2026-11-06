@@ -89,7 +89,7 @@ export class Monitor {
       const target=this.target(targetId);if(!this.selected(task.event,target)||this.stopping)return;
       const payload=task.incoming?task.payload:task.test?{msgtype:'text',text:{content:`【测试消息】${target.name} · PokeMMO 中文报点连接测试\n发送时间：${beijingTime(this.now())}（北京时间）\n这不是实际头目或群怪报点。`}}:formatNotification(task.event,this.translator,this.now(),task.correction,findAlphaDetails(task.event,this.catalog));
       task.status='sending';task.targetName=target.name;task.attempts++;task.attemptedAt=this.now();state.targetNextAt[targetId]=this.now()+3500;if(targetId==='default')state.nextSendAt=state.targetNextAt[targetId];if(target.type==='qmsg')state.targetNextAt[channelRateKey(target)]=state.targetNextAt[targetId];this.store.save();
-      const result=await this.send(target.url,payload,{target,mediaSent:task.mediaSent,onMediaSent:()=>{task.mediaSent=true;this.store.save();}});
+      const result=await this.send(target.url,payload,{target,sendImages:state.config.sendImages===true,mediaSent:task.mediaSent,onMediaSent:()=>{task.mediaSent=true;this.store.save();}});
       state.targetNextAt[targetId]=Math.max(state.targetNextAt[targetId]||0,this.now()+3500);if(targetId==='default')state.nextSendAt=state.targetNextAt[targetId];if(result.providerId)task.providerId=result.providerId;
       task.error=result.error||'';
       if(result.outcome==='success'){

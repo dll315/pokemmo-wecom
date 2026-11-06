@@ -20,7 +20,7 @@ function render(){
     $(kind+'-time').textContent=h.error||('最近成功：'+time(h.lastSuccessAt));
   }
   $('message-count').textContent=`${state.counts.sent} / ${state.counts.pending}`;$('attention-count').textContent=state.counts.attention;
-  if(!dirty){for(const id of ['enabled','alphas','swarms','phenos'])$(id).checked=c[id];$('poll').value=c.pollSeconds;$('remaining').value=c.minRemainingSeconds;for(const e of document.querySelectorAll('[name=region]'))e.checked=c.regions.includes(e.value);}
+  if(!dirty){for(const id of ['enabled','alphas','swarms','phenos','sendImages'])$(id).checked=c[id];$('poll').value=c.pollSeconds;$('remaining').value=c.minRemainingSeconds;for(const e of document.querySelectorAll('[name=region]'))e.checked=c.regions.includes(e.value);}
   const events=$('events');events.replaceChildren();
   for(const e of state.events.slice(0,12)){
     const card=el('article',undefined,'event-item'),top=el('div',undefined,'event-top'),left=el('div');left.append(el('span',e.kind==='alpha'?'头目':'群怪','event-type'+(e.kind==='swarm'?' swarm':'')),el('strong',pName(e)));top.append(left,el('span',status(e),'small muted'));
@@ -52,9 +52,11 @@ $('subscription-form').addEventListener('submit',async e=>{e.preventDefault();co
 $('login-form').addEventListener('submit',async e=>{e.preventDefault();const button=e.submitter;button.disabled=true;try{await api('/api/login',{password:$('password').value});$('password').value='';await refresh();}catch(err){notify(err.message,true);}finally{button.disabled=false;}});
 $('logout').addEventListener('click',async()=>{try{await api('/api/logout',{});showLogin();state=null;}catch(e){notify(e.message,true);}});
 $('config-form').addEventListener('input',()=>{dirty=true;});
-$('config-form').addEventListener('submit',async e=>{e.preventDefault();const button=e.submitter;button.disabled=true;try{await api('/api/config',{enabled:$('enabled').checked,alphas:$('alphas').checked,swarms:$('swarms').checked,phenos:$('phenos').checked,pollSeconds:Number($('poll').value),minRemainingSeconds:Number($('remaining').value),regions:[...document.querySelectorAll('[name=region]:checked')].map(e=>e.value)});dirty=false;notify('设置已保存。');await refresh();}catch(err){notify(err.message,true);}finally{button.disabled=false;}});
+$('config-form').addEventListener('submit',async e=>{e.preventDefault();const button=e.submitter;button.disabled=true;try{await api('/api/config',{enabled:$('enabled').checked,sendImages:$('sendImages').checked,alphas:$('alphas').checked,swarms:$('swarms').checked,phenos:$('phenos').checked,pollSeconds:Number($('poll').value),minRemainingSeconds:Number($('remaining').value),regions:[...document.querySelectorAll('[name=region]:checked')].map(e=>e.value)});dirty=false;notify('设置已保存。');await refresh();}catch(err){notify(err.message,true);}finally{button.disabled=false;}});
 $('target-form').addEventListener('submit',async e=>{e.preventDefault();const button=e.submitter;button.disabled=true;try{const id=$('target-id').value;await api('/api/targets',{...(id?{id}:{}),type:$('target-type').value,groupId:$('target-group').value,name:$('target-name').value,url:$('target-url').value,enabled:$('target-enabled').checked,alphas:$('target-alphas').checked,swarms:$('target-swarms').checked,phenos:$('target-phenos').checked});resetTargetForm();notify('推送链接已保存。');await refresh();}catch(err){notify(err.message,true);}finally{button.disabled=false;}});
 $('target-type').addEventListener('change',channelFields);
 $('cancel-target-edit').addEventListener('click',resetTargetForm);
 $('close-preview').addEventListener('click',()=>$('preview').close());
 function tick(){$('clock').textContent=time(Date.now())+' 北京时间';}tick();setInterval(tick,1000);setInterval(()=>{if(authenticated)void refresh();},5000);void refresh();
+
+$('back-to-top').addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
