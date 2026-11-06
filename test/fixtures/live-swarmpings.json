@@ -1,0 +1,46 @@
+{
+  "id": 2000000007964,
+  "location": "Route 17",
+  "originalJson": {
+    "data": {
+      "Cheapest": {
+        "Ball": [
+          {
+            "Chance": "88%",
+            "Name": "Friend"
+          }
+        ],
+        "HP": "1%",
+        "Status": "Asleep"
+      },
+      "EventSeason": "halloween",
+      "Fastest": {
+        "Ball": [
+          {
+            "Chance": "100%",
+            "Name": "Level"
+          }
+        ],
+        "HP": "1%",
+        "Status": "Asleep"
+      },
+      "HasValuable": false,
+      "Notes": [],
+      "Region": "Johto",
+      "Specific Location": "Route 17",
+      "Tier": 0
+    },
+    "despawnTimestamp": 1793933963,
+    "eventSeason": "halloween",
+    "location": "Route 17",
+    "name": "Umbreon",
+    "region": "Johto",
+    "shareUrl": "http://alpha.pokemmotools.org/swarm-list?pokemon=Umbreon&region=Johto&location=Route+17&timestamp=1793933963",
+    "swarmDurationMinutes": 15
+  },
+  "pokemon": "Umbreon",
+  "region": "Johto",
+  "time_slot": null,
+  "timestamp": "2026-11-06 02:44:23.877809",
+  "topic": "swarmpings"
+}

@@ -1,0 +1,44 @@
+{
+  "id": 1000000005028,
+  "location": "Icefall Cave",
+  "originalJson": {
+    "data": {
+      "Ability": "Hydration",
+      "Egg Group": [
+        "Monster",
+        "Water A"
+      ],
+      "HMs": [
+        "Surf",
+        "Waterfall"
+      ],
+      "Location Notes": "",
+      "Male Ratio": "50",
+      "Map Link": "",
+      "Moveset": [
+        "Surf",
+        "Ice Beam",
+        "Thunder",
+        "Rain Dance"
+      ],
+      "Notes": [
+        "**⚠ ADS HAVE PERISH SONG ⚠**"
+      ],
+      "Region": "Kanto",
+      "Specific Location": "Icefall Cave",
+      "Tier": 2
+    },
+    "despawnTimestamp": 1793939336,
+    "eventSeason": null,
+    "location": "Icefall Cave",
+    "name": "Lapras",
+    "region": "Kanto",
+    "shareUrl": "http://alpha.pokemmotools.org/alpha-list?pokemon=Lapras&region=Kanto&location=Icefall+Cave&timestamp=1793939336",
+    "swarmDurationMinutes": null
+  },
+  "pokemon": "Lapras",
+  "region": "Kanto",
+  "time_slot": 1,
+  "timestamp": "2026-11-06 03:13:56.341810",
+  "topic": "alphapings"
+}
