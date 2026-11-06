@@ -16,7 +16,7 @@ function timings(r,box){
  box.append(grid,element('p',(t.startSource||'源站未提供')+'；'+(t.endSource||'源站未提供'),'note'),element('p','接收时间：'+date(r.receivedAt)+'（北京时间）','note'));
 }
 function reportDetail(r){
- if(r.details){detail(catalog.find(e=>e.key===r.details.key)||r.details);byId('detail-title').textContent=r.title;const timingBox=element('section');timings(r,timingBox);byId('detail-content').prepend(timingBox);}
+ if(r.details){const d=catalog.find(e=>e.key===r.details.key)||r.details;detail({...d,abilityZh:r.profile?.abilityZh||d.abilityZh,movesZh:r.profile?.movesZh?.length?r.profile.movesZh:d.movesZh});byId('detail-title').textContent=r.title;const timingBox=element('section');timings(r,timingBox);byId('detail-content').prepend(timingBox);}
  else{byId('detail-title').textContent=r.title;const box=byId('detail-content');box.replaceChildren();timings(r,box);box.append(element('p',r.regionZh+' · '+r.locationZh),element('p',r.kind==='swarm'?'群集没有匹配的额外资料，不借用头目招式。':'暂无准确匹配的资料，请到管理后台查看原始通知。','note'));byId('catalog-detail').showModal();}
 }
 function reportCard(r){
@@ -25,7 +25,7 @@ function reportCard(r){
  card.append(top,element('p',r.regionZh+' · '+r.locationZh,'report-place'),element('span',phaseLabel(r),'report-pill '+phase(r)));timings(r,card);
  if(r.profile){const p=r.profile;if(r.kind==='alpha'){if(p.maleRatio!==null)card.append(element('p','雄性比例：'+p.maleRatio+'%'));if(p.eggGroups?.length)card.append(element('p','蛋组：'+p.eggGroups.join('、')));if(!r.details){if(p.abilityZh)card.append(element('p','特性：'+p.abilityZh));if(p.movesZh?.length)card.append(element('p','配招：'+p.movesZh.join('、')));}}if(p.tier!==null)card.append(element('p','闪光等级（Tier）：'+p.tier));}
  if(r.swarmInfo){card.append(element('p','位置说明：'+r.swarmInfo.locationNotes));if(r.swarmInfo.captureProbability)card.append(element('p','来源提供的捕获概率：'+r.swarmInfo.captureProbability));}
- if(r.details){const info=element('div',undefined,'report-essentials');info.append(element('p','特性：'+r.details.abilityZh),element('p','招式：'+r.details.movesZh.join('、')),element('p','通行技能／HM：'+(r.details.hmsZh.join('、')||'源站未列出额外通行技能')));if(r.details.locationNotes)info.append(element('p','前往条件：'+r.details.locationNotes));card.append(info);}
+ if(r.details){const info=element('div',undefined,'report-essentials');info.append(element('p','特性：'+(r.profile?.abilityZh||r.details.abilityZh)),element('p','招式：'+(r.profile?.movesZh?.length?r.profile.movesZh:r.details.movesZh).join('、')),element('p','通行技能／HM：'+(r.details.hmsZh.join('、')||'源站未列出额外通行技能')));if(r.details.locationNotes)info.append(element('p','前往条件：'+r.details.locationNotes));card.append(info);}
  const button=element('button',r.details?'详细资料与位置图':'查看报点详情','quiet');button.addEventListener('click',()=>reportDetail(r));card.append(button);return card;
 }
 function filtered(){const q=byId('feed-search').value.trim().toLowerCase(),region=byId('feed-region').value,windowOnly=byId('feed-window').checked;return(current?.incoming||[]).filter(r=>(!q||searchable({...r,...r.details}).includes(q)||r.title.toLowerCase().includes(q))&&(!region||r.region===region)&&(!windowOnly||phase(r)==='in-window'));}
