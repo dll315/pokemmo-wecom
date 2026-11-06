@@ -76,7 +76,7 @@ if(kind==='群集')lines.push('**位置说明：** '+(locationNotes?translated(c
 if(probability&&/^(?:100|\d{1,2})(?:\.\d+)?%$/.test(probability)&&parseFloat(probability)<=100)lines.push('**来源提供的捕获概率：** '+probability);
 const catalog=DICTIONARIES.catalog?.[region]?.[location]||[];
 const detail=catalog.find(row=>norm(row.name)===norm(pokemon))?.data;
-const profile=eventProfile(pick,detail,translator,pokemon);
+const profile=eventProfile(pick,kind==='头目'?detail:null,translator,pokemon);
 if(kind==='头目'){
  if(profile.maleRatio!==null)lines.push('**雄性比例：** '+profile.maleRatio+'%');
  if(profile.eggGroups.length)lines.push('**蛋组：** '+profile.eggGroups.join('、'));
