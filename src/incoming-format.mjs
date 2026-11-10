@@ -79,7 +79,7 @@ if(probability&&/^(?:100|\d{1,2})(?:\.\d+)?%$/.test(probability)&&parseFloat(pro
 const catalog=DICTIONARIES.catalog?.[region]?.[location]||[];
 const cachedDetail=catalog.find(row=>norm(row.name)===norm(pokemon))?.data;const sourceDetail=body.originalJson?.data||body.original_json?.data;const detail=kind==='头目'&&(cachedDetail||sourceDetail)?{...cachedDetail,...sourceDetail}:cachedDetail;
 if(kind==='头目'&&sourceDetail)details=findAlphaDetails({pokemon,region,location},buildCatalog({[region]:{[location]:[{name:pokemon,data:detail}]}},translator));
-let position=[tr('region',region),tr('location',location)];if(details?.specificLocationZh&&!position.includes(details.specificLocationZh))position.push(details.specificLocationZh);let positionText=position.join(' · ');const positionNote=locationNotes?translated(clean(locationNotes)):'';if(positionNote&&!positionText.includes(positionNote))positionText+='；'+positionNote;lines.splice(3,0,kind==='群集'?'**所在地图：** '+tr('location',location):'**位置说明：** '+positionText);
+let position=[tr('region',region),tr('location',location)];if(details?.specificLocationZh&&!position.includes(details.specificLocationZh))position.push(details.specificLocationZh);let positionText=position.join(' · ');const positionNote=locationNotes?translated(clean(locationNotes)):'';if(positionNote&&!positionText.includes(positionNote))positionText+='；'+positionNote;if(kind!=='群集')lines.splice(3,0,'**位置说明：** '+positionText);
 const profile=eventProfile(pick,kind==='头目'?detail:null,translator,pokemon);
 if(kind==='头目'){
  if(profile.maleRatio!==null)lines.push('**雄性比例：** '+profile.maleRatio+'%');
