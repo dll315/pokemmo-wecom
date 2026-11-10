@@ -1,5 +1,14 @@
 # 交付验证记录
 
+## 2026-11-10 v1.9.3 明雷正文省略位置
+
+- 按用户进一步明确的要求，明雷/群集推送正文省略所在地图和位置字段，地区仅在首行显示。万圣节方法在起止时间之后排列。
+- 171项测试通过，覆盖正文省略地图/位置/备注、地区首行、捕捉方法顺序，以及头目位置资料。桌面与手机导航、模式开关和后台检查通过。
+- Linux实际镜像、持久化、部署更新回滚及独立更新通过 https://github.com/dll315/pokemmo-wecom/actions/runs/42743167001
+- 正式公开下载及更新命令通过 https://github.com/dll315/pokemmo-wecom/actions/runs/42743421686
+- 发布 https://github.com/dll315/pokemmo-wecom/releases/tag/v1.9.3 。服务器需要执行更新命令。
+
+
 ## 2026-11-10 v1.9.2 明雷仅显示地图
 
 - 群集正文采用“所在地图”及来源location的中文名称，省略重复地区、Specific Location和Location Notes。网页卡片同步精简地点重复显示。
