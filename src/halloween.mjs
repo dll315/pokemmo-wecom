@@ -11,7 +11,7 @@ export function applyHalloween(payload,{enabled=false,pokemon,kind}={}){
  const method=enabled&&['alpha','swarm','pheno'].includes(kind)?halloweenMethod(pokemon):null;
  if(!method||typeof payload.markdown?.content!=='string')return payload;
  const lines=payload.markdown.content.replace(/^\*\*捕捉方案｜[^\n]+\n(?:•[^\n]*(?:\n|$))+/gm,'').split('\n').filter(line=>!/^\*\*(?:捕获概率（[^）]*）|来源提供的捕获概率)：\*\*/.test(line));
- const position=lines.findIndex(line=>line.startsWith('**位置说明：**'));
+ const position=lines.findIndex(line=>/^\*\*(?:位置说明|所在地图)：/.test(line));
  lines.splice(position<0?1:position+1,0,'**万圣节捕捉方法：** '+method);
  let content=lines.join('\n');
  if(Buffer.byteLength(content)>4096){const suffix='\n…（末尾内容已省略）',chars=Array.from(content);let bytes=Buffer.byteLength(content);while(bytes+Buffer.byteLength(suffix)>4096)bytes-=Buffer.byteLength(chars.pop());content=chars.join('')+suffix;}

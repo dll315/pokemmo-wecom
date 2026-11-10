@@ -79,7 +79,7 @@ if(probability&&/^(?:100|\d{1,2})(?:\.\d+)?%$/.test(probability)&&parseFloat(pro
 const catalog=DICTIONARIES.catalog?.[region]?.[location]||[];
 const cachedDetail=catalog.find(row=>norm(row.name)===norm(pokemon))?.data;const sourceDetail=body.originalJson?.data||body.original_json?.data;const detail=kind==='头目'&&(cachedDetail||sourceDetail)?{...cachedDetail,...sourceDetail}:cachedDetail;
 if(kind==='头目'&&sourceDetail)details=findAlphaDetails({pokemon,region,location},buildCatalog({[region]:{[location]:[{name:pokemon,data:detail}]}},translator));
-let position=[tr('region',region),tr('location',location)];if(details?.specificLocationZh&&!position.includes(details.specificLocationZh))position.push(details.specificLocationZh);let positionText=position.join(' · ');const positionNote=locationNotes?translated(clean(locationNotes)):'';if(positionNote&&!positionText.includes(positionNote))positionText+='；'+positionNote;lines.splice(3,0,'**位置说明：** '+positionText);
+let position=[tr('region',region),tr('location',location)];if(details?.specificLocationZh&&!position.includes(details.specificLocationZh))position.push(details.specificLocationZh);let positionText=position.join(' · ');const positionNote=locationNotes?translated(clean(locationNotes)):'';if(positionNote&&!positionText.includes(positionNote))positionText+='；'+positionNote;lines.splice(3,0,kind==='群集'?'**所在地图：** '+tr('location',location):'**位置说明：** '+positionText);
 const profile=eventProfile(pick,kind==='头目'?detail:null,translator,pokemon);
 if(kind==='头目'){
  if(profile.maleRatio!==null)lines.push('**雄性比例：** '+profile.maleRatio+'%');
@@ -102,7 +102,7 @@ const footer=sourceLink==='https://alpha.pokemmotools.org/'?'':`\n[查看来源]
 const bytes=s=>Array.from(s).reduce((n,c)=>n+(c.codePointAt(0)>65535?4:c.codePointAt(0)>2047?3:c.codePointAt(0)>127?2:1),0);
 let content=lines.join('\n');
 if(bytes(content+footer)>4000){const chars=Array.from(content);let size=bytes(content);while(chars.length&&size+bytes('\n…（内容过长已截断）'+footer)>4000)size-=bytes(chars.pop());content=chars.join('')+'\n…（内容过长已截断）';}
-const swarmInfo=kind==='群集'?{locationNotes:locationNotes?translated(clean(locationNotes)):tr('region',region)+' · '+tr('location',location),captureProbability:/^(?:100|\d{1,2})(?:\.\d+)?%$/.test(probability)&&parseFloat(probability)<=100?probability:null}:null;
+const swarmInfo=kind==='群集'?{locationNotes:tr('location',location),captureProbability:/^(?:100|\d{1,2})(?:\.\d+)?%$/.test(probability)&&parseFloat(probability)<=100?probability:null}:null;
 return {classification,profile,swarmInfo,payload:formatPush({_sprite:profile.sprite,msgtype:'markdown',markdown:{content:content+footer}},timing),title,timing,sourceTiming,reportedStatus:clean(pick('status','状态')),details,pokemon,region,location,kind:classification.kind};
 
 }

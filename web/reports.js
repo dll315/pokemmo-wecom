@@ -23,10 +23,10 @@ function reportDetail(r){
 function reportCard(r){
  const card=element('article',undefined,'card report-card '+r.kind);const top=element('div',undefined,'report-card-heading');top.append(element('h3',r.title),element('span',r.kind==='alpha'?'头目':r.kind==='swarm'?'群集':r.kind==='pheno'?'奇遇':'类型待识别','report-kind '+r.kind));
  if(r.profile?.sprite)card.append(art({sprite:r.profile.sprite,pokemonZh:r.pokemonZh}));
- card.append(top,element('p',r.regionZh+' · '+r.locationZh,'report-place'),element('span',phaseLabel(r),'report-pill '+phase(r)));timings(r,card);
+ card.append(top,element('p',r.kind==='swarm'?'所在地图：'+r.locationZh:r.regionZh+' · '+r.locationZh,'report-place'),element('span',phaseLabel(r),'report-pill '+phase(r)));timings(r,card);
  if(r.profile){const p=r.profile;if(r.kind==='alpha'){if(p.maleRatio!==null)card.append(element('p','雄性比例：'+p.maleRatio+'%'));if(p.eggGroups?.length)card.append(element('p','蛋组：'+p.eggGroups.join('、')));if(!r.details){if(p.abilityZh)card.append(element('p','特性：'+p.abilityZh));if(p.movesZh?.length)card.append(element('p','配招：'+p.movesZh.join('、')));}}if(p.tier!==null)card.append(element('p','闪光等级（Tier）：'+p.tier));}
  for(const plan of r.profile?.capturePlans||[])card.append(element('p','捕获概率（'+plan.strategy+'）：'+plan.ball+' '+plan.chance+'；HP '+plan.hp+'；状态：'+plan.status));
- if(r.swarmInfo){card.append(element('p','位置说明：'+r.swarmInfo.locationNotes));if(r.swarmInfo.captureProbability)card.append(element('p','来源提供的捕获概率：'+r.swarmInfo.captureProbability));}
+ if(r.swarmInfo){if(r.swarmInfo.captureProbability)card.append(element('p','来源提供的捕获概率：'+r.swarmInfo.captureProbability));}
  if(r.details){const info=element('div',undefined,'report-essentials');info.append(element('p','特性：'+(r.profile?.abilityZh||r.details.abilityZh)),element('p','招式：'+(r.profile?.movesZh?.length?r.profile.movesZh:r.details.movesZh).join('、')),element('p','通行技能／HM：'+(r.details.hmsZh.join('、')||'源站未列出额外通行技能')));if(r.details.locationNotes)info.append(element('p','前往条件：'+r.details.locationNotes));card.append(info);}
  const button=element('button',r.details?'详细资料与位置图':'查看报点详情','quiet');button.addEventListener('click',()=>reportDetail(r));card.append(button);return card;
 }
